@@ -10,7 +10,7 @@ const sendEmail = async ({ to, subject, text }) => {
   });
 
   const mailOptions = {
-    from: "no-reply@gabaritae.com.br",
+    from: process.env.EMAIL_USERNAME,
     to,
     subject,
     text,
@@ -25,4 +25,4 @@ const sendEmail = async ({ to, subject, text }) => {
   }
 };
 
-module.exports = sendEmail;
+module.exports = { sendEmail };

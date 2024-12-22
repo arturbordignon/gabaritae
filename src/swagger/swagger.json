@@ -3,12 +3,12 @@
   "info": {
     "title": "Gabaritaê API",
     "version": "1.0.0",
-    "description": "API para o backend do aplicativo Gabaritaê."
+    "description": "API para o backend do aplicativo Gabaritaê, que inclui autenticação, gamificação, simulados e histórico do usuário."
   },
   "servers": [
     {
-      "url": "http://localhost:5000/api",
-      "description": "Servidor local"
+      "url": "http://localhost:4500/api",
+      "description": "Servidor Local"
     }
   ],
   "components": {
@@ -20,15 +20,10 @@
       }
     }
   },
-  "security": [
-    {
-      "bearerAuth": []
-    }
-  ],
   "paths": {
     "/auth/register": {
       "post": {
-        "summary": "Registrar novo usuário",
+        "summary": "Registrar um novo usuário",
         "tags": ["Autenticação"],
         "requestBody": {
           "required": true,
@@ -40,35 +35,24 @@
                   "completeName": { "type": "string" },
                   "email": { "type": "string" },
                   "password": { "type": "string" },
+                  "confirmPassword": { "type": "string" },
                   "category": { "type": "string", "example": "ENEM" }
                 },
-                "required": ["completeName", "email", "password", "category"]
+                "required": ["completeName", "email", "password", "confirmPassword", "category"]
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Usuário registrado com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": { "type": "string" }
-                  }
-                }
-              }
-            }
-          },
-          "400": { "description": "Erro: Usuário já existe" },
-          "500": { "description": "Erro no servidor" }
+          "201": { "description": "Usuário registrado com sucesso" },
+          "400": { "description": "Erro na validação dos dados" },
+          "500": { "description": "Erro interno do servidor" }
         }
       }
     },
     "/auth/login": {
       "post": {
-        "summary": "Login de usuário existente",
+        "summary": "Login do usuário",
         "tags": ["Autenticação"],
         "requestBody": {
           "required": true,
@@ -87,7 +71,7 @@
         },
         "responses": {
           "200": {
-            "description": "Login bem-sucedido",
+            "description": "Login realizado com sucesso",
             "content": {
               "application/json": {
                 "schema": {
@@ -100,13 +84,13 @@
             }
           },
           "400": { "description": "Credenciais inválidas" },
-          "500": { "description": "Erro no servidor" }
+          "500": { "description": "Erro interno do servidor" }
         }
       }
     },
     "/auth/forgot-password": {
       "post": {
-        "summary": "Enviar código de redefinição de senha",
+        "summary": "Solicitar redefinição de senha",
         "tags": ["Autenticação"],
         "requestBody": {
           "required": true,
@@ -123,19 +107,47 @@
           }
         },
         "responses": {
-          "200": { "description": "Código enviado com sucesso" },
+          "200": { "description": "Email de redefinição enviado com sucesso" },
           "404": { "description": "Usuário não encontrado" },
-          "500": { "description": "Erro no servidor" }
+          "500": { "description": "Erro interno do servidor" }
         }
       }
     },
-    "/profile": {
+    "/auth/reset-password": {
+      "post": {
+        "summary": "Redefinir senha do usuário",
+        "tags": ["Autenticação"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string" },
+                  "code": { "type": "string" },
+                  "newPassword": { "type": "string" }
+                },
+                "required": ["email", "code", "newPassword"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Senha redefinida com sucesso" },
+          "400": { "description": "Código inválido ou expirado" },
+          "500": { "description": "Erro interno do servidor" }
+        }
+      }
+    },
+    "/profile/me": {
       "get": {
-        "summary": "Buscar perfil do usuário",
+        "summary": "Obter perfil do usuário",
         "tags": ["Perfil"],
+        "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {
-            "description": "Dados do perfil do usuário",
+            "description": "Perfil retornado com sucesso",
             "content": {
               "application/json": {
                 "schema": {
@@ -152,34 +164,90 @@
               }
             }
           },
-          "401": { "description": "Token inválido" },
-          "500": { "description": "Erro no servidor" }
+          "500": { "description": "Erro ao buscar perfil" }
         }
       }
     },
-    "/simulado/category": {
+    "/profile/update": {
+      "put": {
+        "summary": "Atualizar perfil do usuário",
+        "tags": ["Perfil"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "completeName": { "type": "string" },
+                  "profilePicture": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Perfil atualizado com sucesso" },
+          "500": { "description": "Erro ao atualizar perfil" }
+        }
+      }
+    },
+    "/profile/change-password": {
+      "post": {
+        "summary": "Alterar senha do usuário",
+        "tags": ["Perfil"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "oldPassword": { "type": "string" },
+                  "newPassword": { "type": "string" }
+                },
+                "required": ["oldPassword", "newPassword"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Senha alterada com sucesso" },
+          "400": { "description": "Erro ao validar senha antiga" },
+          "500": { "description": "Erro ao alterar senha" }
+        }
+      }
+    },
+    "/simulado/topics": {
       "get": {
-        "summary": "Listar categorias disponíveis",
+        "summary": "Listar tópicos do ENEM",
         "tags": ["Simulado"],
         "responses": {
           "200": {
-            "description": "Lista de categorias",
+            "description": "Tópicos listados com sucesso",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": { "type": "string" }
+                  "type": "object",
+                  "properties": {
+                    "topics": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
                 }
               }
             }
           },
-          "500": { "description": "Erro no servidor" }
+          "500": { "description": "Erro interno do servidor" }
         }
       }
     },
     "/simulado/questions": {
       "post": {
-        "summary": "Buscar perguntas de um simulado",
+        "summary": "Listar questões por ano e disciplina",
         "tags": ["Simulado"],
         "requestBody": {
           "required": true,
@@ -188,51 +256,124 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "ano": { "type": "string" },
-                  "disciplina": { "type": "string" }
+                  "year": { "type": "integer" },
+                  "discipline": {
+                    "type": "string",
+                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
+                  }
                 },
-                "required": ["ano", "disciplina"]
+                "required": ["year", "discipline"]
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Lista de perguntas",
+            "description": "Questões listadas com sucesso",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "questionId": { "type": "string" },
-                      "description": { "type": "string" },
-                      "options": {
-                        "type": "array",
-                        "items": { "type": "string" }
-                      },
-                      "correctAnswer": { "type": "string" }
+                  "type": "object",
+                  "properties": {
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "title": { "type": "string" },
+                          "context": { "type": "string" },
+                          "alternatives": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "letter": { "type": "string" },
+                                "text": { "type": "string" },
+                                "isCorrect": { "type": "boolean" }
+                              }
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }
               }
             }
           },
-          "400": { "description": "Parâmetros inválidos" },
-          "500": { "description": "Erro no servidor" }
+          "400": { "description": "Disciplina não reconhecida" },
+          "500": { "description": "Erro interno do servidor" }
+        }
+      }
+    },
+    "/gamification/": {
+      "get": {
+        "summary": "Obter nível e pontos do usuário",
+        "tags": ["Gamificação"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Dados de gamificação retornados com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "level": { "type": "integer" },
+                    "points": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Erro ao buscar dados de gamificação" }
+        }
+      }
+    },
+    "/gamification/update": {
+      "post": {
+        "summary": "Atualizar pontos do usuário",
+        "tags": ["Gamificação"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pointsEarned": { "type": "integer" }
+                },
+                "required": ["pointsEarned"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pontos atualizados com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "points": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Erro ao atualizar pontos" }
         }
       }
     },
     "/history/save": {
       "post": {
-        "summary": "Salvar histórico de simulado",
+        "summary": "Salvar histórico do simulado",
         "tags": ["Histórico"],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -246,21 +387,121 @@
                       "type": "object",
                       "properties": {
                         "questionId": { "type": "string" },
+                        "numeroQuestao": { "type": "integer" },
+                        "discipline": { "type": "string" },
                         "correct": { "type": "boolean" },
-                        "responseTime": { "type": "integer" }
+                        "responseTime": { "type": "integer" },
+                        "userAnswer": { "type": "string" },
+                        "correctAnswer": { "type": "string" }
                       }
                     }
                   },
+                  "totalQuestions": { "type": "integer" },
+                  "correctAnswers": { "type": "integer" },
+                  "incorrectAnswers": { "type": "integer" },
                   "totalTime": { "type": "integer" }
                 },
-                "required": ["questions", "totalTime"]
+                "required": [
+                  "questions",
+                  "totalQuestions",
+                  "correctAnswers",
+                  "incorrectAnswers",
+                  "totalTime"
+                ]
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Histórico salvo com sucesso" },
+          "201": { "description": "Histórico salvo com sucesso" },
           "500": { "description": "Erro ao salvar histórico" }
+        }
+      }
+    },
+    "/history/user": {
+      "get": {
+        "summary": "Obter histórico do usuário",
+        "tags": ["Histórico"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Histórico retornado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "histories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "userId": { "type": "string" },
+                          "totalQuestions": { "type": "integer" },
+                          "correctAnswers": { "type": "integer" },
+                          "incorrectAnswers": { "type": "integer" },
+                          "totalTime": { "type": "integer" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Erro ao buscar histórico" }
+        }
+      }
+    },
+    "/history/detailed": {
+      "get": {
+        "summary": "Obter histórico detalhado do usuário",
+        "tags": ["Histórico"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Histórico detalhado retornado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "userId": { "type": "string" },
+                      "questions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "questionId": { "type": "string" },
+                            "context": { "type": "string" },
+                            "title": { "type": "string" },
+                            "alternatives": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "letter": { "type": "string" },
+                                  "text": { "type": "string" },
+                                  "isCorrect": { "type": "boolean" }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "totalQuestions": { "type": "integer" },
+                      "correctAnswers": { "type": "integer" },
+                      "incorrectAnswers": { "type": "integer" },
+                      "totalTime": { "type": "integer" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Erro interno do servidor" }
         }
       }
     }

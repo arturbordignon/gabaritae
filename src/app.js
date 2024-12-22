@@ -12,6 +12,9 @@ const historyRoutes = require("./routes/historyRoutes");
 require("dotenv").config();
 
 const requestLogger = require("./middlewares/requestLogger");
+const errorHandler = require("./middlewares/errorHandler");
+
+const app = express();
 app.use(requestLogger);
 connectDB();
 
@@ -25,6 +28,6 @@ app.use("/api/simulado", simuladoRoutes);
 app.use("/api/gamification", gamificationRoutes);
 app.use("/api/history", historyRoutes);
 
-app.use(require("./middlewares/errorHandler"));
+app.use(errorHandler);
 
 module.exports = app;
