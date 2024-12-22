@@ -11,7 +11,8 @@ const gamificationRoutes = require("./routes/gamificationRoutes");
 const historyRoutes = require("./routes/historyRoutes");
 require("dotenv").config();
 
-const app = express();
+const requestLogger = require("./middlewares/requestLogger");
+app.use(requestLogger);
 connectDB();
 
 app.use(express.json());
