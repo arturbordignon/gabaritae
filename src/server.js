@@ -1,6 +1,8 @@
 const app = require("./app");
 const logger = require("./config/logger");
 const mongoose = require("mongoose");
+const { job } = require("./cron");
+job.start();
 
 const PORT = process.env.PORT || 4500;
 
