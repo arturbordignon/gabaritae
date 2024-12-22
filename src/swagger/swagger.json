@@ -1,0 +1,268 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Gabaritaê API",
+    "version": "1.0.0",
+    "description": "API para o backend do aplicativo Gabaritaê."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Servidor local"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Registrar novo usuário",
+        "tags": ["Autenticação"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "completeName": { "type": "string" },
+                  "email": { "type": "string" },
+                  "password": { "type": "string" },
+                  "category": { "type": "string", "example": "ENEM" }
+                },
+                "required": ["completeName", "email", "password", "category"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuário registrado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Erro: Usuário já existe" },
+          "500": { "description": "Erro no servidor" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login de usuário existente",
+        "tags": ["Autenticação"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string" }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login bem-sucedido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Credenciais inválidas" },
+          "500": { "description": "Erro no servidor" }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "summary": "Enviar código de redefinição de senha",
+        "tags": ["Autenticação"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string" }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Código enviado com sucesso" },
+          "404": { "description": "Usuário não encontrado" },
+          "500": { "description": "Erro no servidor" }
+        }
+      }
+    },
+    "/profile": {
+      "get": {
+        "summary": "Buscar perfil do usuário",
+        "tags": ["Perfil"],
+        "responses": {
+          "200": {
+            "description": "Dados do perfil do usuário",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "completeName": { "type": "string" },
+                    "email": { "type": "string" },
+                    "profilePicture": { "type": "string" },
+                    "category": { "type": "string" },
+                    "vidas": { "type": "integer" },
+                    "points": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Token inválido" },
+          "500": { "description": "Erro no servidor" }
+        }
+      }
+    },
+    "/simulado/category": {
+      "get": {
+        "summary": "Listar categorias disponíveis",
+        "tags": ["Simulado"],
+        "responses": {
+          "200": {
+            "description": "Lista de categorias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          },
+          "500": { "description": "Erro no servidor" }
+        }
+      }
+    },
+    "/simulado/questions": {
+      "post": {
+        "summary": "Buscar perguntas de um simulado",
+        "tags": ["Simulado"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ano": { "type": "string" },
+                  "disciplina": { "type": "string" }
+                },
+                "required": ["ano", "disciplina"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lista de perguntas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "questionId": { "type": "string" },
+                      "description": { "type": "string" },
+                      "options": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      },
+                      "correctAnswer": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Parâmetros inválidos" },
+          "500": { "description": "Erro no servidor" }
+        }
+      }
+    },
+    "/history/save": {
+      "post": {
+        "summary": "Salvar histórico de simulado",
+        "tags": ["Histórico"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "questions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "questionId": { "type": "string" },
+                        "correct": { "type": "boolean" },
+                        "responseTime": { "type": "integer" }
+                      }
+                    }
+                  },
+                  "totalTime": { "type": "integer" }
+                },
+                "required": ["questions", "totalTime"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Histórico salvo com sucesso" },
+          "500": { "description": "Erro ao salvar histórico" }
+        }
+      }
+    }
+  }
+}
