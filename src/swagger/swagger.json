@@ -7,8 +7,8 @@
   },
   "servers": [
     {
-      "url": "http://localhost:4500/api",
-      "description": "Servidor Local"
+      "url": "https://gabaritae-backend.onrender.com/api",
+      "description": "Deployed Backend"
     }
   ],
   "components": {
