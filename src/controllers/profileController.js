@@ -1,4 +1,11 @@
 const User = require("../models/User");
+const cloudinary = require("cloudinary").v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 exports.getProfile = async (req, res) => {
   try {
@@ -16,7 +23,16 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { completeName, profilePicture } = req.body;
+    const { completeName } = req.body;
+    let profilePicture;
+
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "gabaritae/profile_pictures",
+        use_filename: true,
+      });
+      profilePicture = result.secure_url;
+    }
 
     const user = await User.findById(req.user.id);
     if (!user) {

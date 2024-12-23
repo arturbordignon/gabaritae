@@ -22,15 +22,15 @@ exports.registerUser = async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Usuário já cadastrado." });
-    }
+    const userExists = await User.findOne({ email });
+    if (userExists) return res.status(400).json({ message: "Usuário já existe" });
 
-    const user = new User({ completeName, email, password, category });
-    await user.save();
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ completeName, email, password: hashedPassword, category });
+    await newUser.save();
 
-    res.status(201).json({ message: "Usuário registrado com sucesso." });
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    res.status(201).json({ token });
   } catch (error) {
     res.status(500).json({ message: "Erro ao registrar usuário.", error: error.message });
   }
@@ -108,7 +108,14 @@ exports.forgotPassword = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   try {
-    const { email, code, newPassword } = req.body;
+    const { email, code, newPassword, confirmPassword } = req.body;
+
+    if (newPassword !== confirmPassword) {
+      logger.warn(`Tentativa de redefinição de senha com senhas não coincidentes: ${email}`);
+      return res.status(400).json({
+        message: "A nova senha e a confirmação da senha não coincidem.",
+      });
+    }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
@@ -131,15 +138,17 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Código inválido ou expirado." });
     }
 
-    user.password = newPassword;
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
     user.resetPasswordCode = undefined;
     user.resetPasswordExpire = undefined;
+
     await user.save();
 
     logger.info(`Senha redefinida com sucesso para: ${email}`);
     res.status(200).json({ message: "Senha redefinida com sucesso." });
   } catch (error) {
     logger.error(`Erro ao redefinir senha: ${error.message}`);
-    res.status(500).json({ message: "Erro ao redefinir senha." });
+    res.status(500).json({ message: "Erro ao redefinir senha.", error: error.message });
   }
 };

@@ -32,10 +32,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "completeName": { "type": "string" },
-                  "email": { "type": "string" },
-                  "password": { "type": "string" },
-                  "confirmPassword": { "type": "string" },
+                  "completeName": { "type": "string", "example": "João Silva" },
+                  "email": { "type": "string", "example": "joao.silva@example.com" },
+                  "password": { "type": "string", "example": "Senha123@" },
+                  "confirmPassword": { "type": "string", "example": "Senha123@" },
                   "category": { "type": "string", "example": "ENEM" }
                 },
                 "required": ["completeName", "email", "password", "confirmPassword", "category"]
@@ -44,9 +44,48 @@
           }
         },
         "responses": {
-          "201": { "description": "Usuário registrado com sucesso" },
-          "400": { "description": "Erro na validação dos dados" },
-          "500": { "description": "Erro interno do servidor" }
+          "201": {
+            "description": "Usuário registrado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro na validação dos dados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "As senhas não coincidem." }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Erro ao registrar usuário." }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -126,20 +165,67 @@
                 "properties": {
                   "email": { "type": "string" },
                   "code": { "type": "string" },
-                  "newPassword": { "type": "string" }
+                  "newPassword": { "type": "string" },
+                  "confirmPassword": { "type": "string" }
                 },
-                "required": ["email", "code", "newPassword"]
+                "required": ["email", "code", "newPassword", "confirmPassword"]
+              },
+              "example": {
+                "email": "joao.silva@example.com",
+                "code": "123456",
+                "newPassword": "Senha123@",
+                "confirmPassword": "Senha123@"
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Senha redefinida com sucesso" },
-          "400": { "description": "Código inválido ou expirado" },
-          "500": { "description": "Erro interno do servidor" }
+          "200": {
+            "description": "Senha redefinida com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Senha redefinida com sucesso." }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Código inválido ou expirado, ou erro de validação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Código inválido ou expirado."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Erro ao redefinir senha." }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
+
     "/profile/me": {
       "get": {
         "summary": "Obter perfil do usuário",
@@ -176,19 +262,46 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "completeName": { "type": "string" },
-                  "profilePicture": { "type": "string" }
+                  "completeName": {
+                    "type": "string",
+                    "description": "Nome completo do usuário"
+                  },
+                  "profilePicture": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Arquivo de imagem para a foto do perfil"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Perfil atualizado com sucesso" },
+          "200": {
+            "description": "Perfil atualizado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "completeName": { "type": "string" },
+                        "profilePicture": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Usuário não encontrado" },
           "500": { "description": "Erro ao atualizar perfil" }
         }
       }
