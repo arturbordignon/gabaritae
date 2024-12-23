@@ -225,6 +225,40 @@
         }
       }
     },
+    "/home": {
+      "get": {
+        "summary": "Obter dados da página inicial",
+        "tags": ["Home"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Detalhes da página inicial do usuário",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "completeName": { "type": "string", "example": "João Silva" },
+                    "vidas": { "type": "integer", "example": 8 },
+                    "points": { "type": "integer", "example": 45 },
+                    "level": { "type": "integer", "example": 3 }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticação inválido ou ausente"
+          },
+          "404": {
+            "description": "Usuário não encontrado"
+          },
+          "500": {
+            "description": "Erro no servidor"
+          }
+        }
+      }
+    },
 
     "/profile/me": {
       "get": {

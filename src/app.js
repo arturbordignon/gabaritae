@@ -10,6 +10,7 @@ const simuladoRoutes = require("./routes/simuladoRoutes");
 const gamificationRoutes = require("./routes/gamificationRoutes");
 const historyRoutes = require("./routes/historyRoutes");
 require("dotenv").config();
+const homeRoutes = require("./routes/homeRoutes");
 
 const requestLogger = require("./middlewares/requestLogger");
 const errorHandler = require("./middlewares/errorHandler");
@@ -24,6 +25,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/home", homeRoutes);
 app.use("/api/simulado", simuladoRoutes);
 app.use("/api/gamification", gamificationRoutes);
 app.use("/api/history", historyRoutes);
