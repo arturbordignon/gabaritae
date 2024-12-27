@@ -15,7 +15,6 @@ exports.registerUser = async (req, res) => {
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         message:
@@ -47,15 +46,16 @@ exports.loginUser = async (req, res) => {
     }
 
     if (!(await bcrypt.compare(password, user.password))) {
-    if (!(await bcrypt.compare(password, user.password))) {
-      logger.warn(`Senha incorreta para o usuário: ${email}`);
-      return res.status(400).json({ message: "Senha incorreta." });
-    }
+      if (!(await bcrypt.compare(password, user.password))) {
+        logger.warn(`Senha incorreta para o usuário: ${email}`);
+        return res.status(400).json({ message: "Senha incorreta." });
+      }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
-    logger.info(`Usuário logado: ${email}`);
-    logger.info(`Usuário logado: ${email}`);
-    res.status(200).json({ token, message: "Login realizado com sucesso." });
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+      logger.info(`Usuário logado: ${email}`);
+      logger.info(`Usuário logado: ${email}`);
+      res.status(200).json({ token, message: "Login realizado com sucesso." });
+    }
   } catch (error) {
     logger.error(`Erro ao fazer login: ${error.message}`);
     res.status(500).json({ message: "Erro ao fazer login." });
