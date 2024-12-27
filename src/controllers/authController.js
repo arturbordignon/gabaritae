@@ -14,7 +14,6 @@ exports.registerUser = async (req, res) => {
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         message:
@@ -28,9 +27,12 @@ exports.registerUser = async (req, res) => {
     const newUser = new User({ completeName, email, password, category });
     await newUser.save();
 
+    // Gera um token JWT
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+
     res.status(201).json({ token });
   } catch (error) {
+    console.error(`Erro ao registrar usuário: ${error.message}`);
     res.status(500).json({ message: "Erro ao registrar usuário.", error: error.message });
   }
 };
@@ -39,6 +41,7 @@ exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Busca o usuário pelo email
     const user = await User.findOne({ email });
     if (!user) {
       logger.warn(`Tentativa de login com email não cadastrado: ${email}`);
