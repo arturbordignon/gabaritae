@@ -27,7 +27,6 @@ exports.registerUser = async (req, res) => {
     const newUser = new User({ completeName, email, password, category });
     await newUser.save();
 
-    // Gera um token JWT
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
     res.status(201).json({ token });
@@ -41,24 +40,21 @@ exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Busca o usuário pelo email
     const user = await User.findOne({ email });
     if (!user) {
       logger.warn(`Tentativa de login com email não cadastrado: ${email}`);
       return res.status(404).json({ message: "Usuário não encontrado." });
     }
 
-    if (!(await bcrypt.compare(password, user.password))) {
-      if (!(await bcrypt.compare(password, user.password))) {
-        logger.warn(`Senha incorreta para o usuário: ${email}`);
-        return res.status(400).json({ message: "Senha incorreta." });
-      }
-
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
-      logger.info(`Usuário logado: ${email}`);
-      logger.info(`Usuário logado: ${email}`);
-      res.status(200).json({ token, message: "Login realizado com sucesso." });
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      logger.warn(`Senha incorreta para o usuário: ${email}`);
+      return res.status(400).json({ message: "Senha incorreta." });
     }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    logger.info(`Usuário logado: ${email}`);
+    res.status(200).json({ token, message: "Login realizado com sucesso." });
   } catch (error) {
     logger.error(`Erro ao fazer login: ${error.message}`);
     res.status(500).json({ message: "Erro ao fazer login." });
