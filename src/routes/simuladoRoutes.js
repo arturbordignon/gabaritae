@@ -12,7 +12,7 @@ const router = express.Router();
 
 router.get("/topics", listTopics);
 router.post("/questions", getQuestionsByYearAndDiscipline);
-router.get("/question/:year/:questionId", authMiddleware, getQuestion);
+router.post("/question", authMiddleware, getQuestion);
 router.post("/check-answer", authMiddleware, checkAnswer);
 router.get("/check-vidas", authMiddleware, checkVidas);
 

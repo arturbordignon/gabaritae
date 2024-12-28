@@ -20,6 +20,12 @@ const userSchema = new mongoose.Schema({
     default: null,
   },
   points: { type: Number, default: 0 },
+  offsets: {
+    matematica: { type: Number, default: 0 },
+    linguagens: { type: Number, default: 0 },
+    "ciencias-humanas": { type: Number, default: 0 },
+    "ciencias-natureza": { type: Number, default: 0 },
+  },
 });
 
 userSchema.pre("save", async function (next) {

@@ -17,9 +17,29 @@ exports.listTopics = async (req, res) => {
 
 exports.getQuestion = async (req, res) => {
   try {
-    const { year, questionId } = req.params;
+    const { year, discipline } = req.body;
+    const userId = req.user.id;
+
+    const disciplineOffsets = {
+      matematica: 150,
+      linguagens: 0,
+      "ciencias-humanas": 46,
+      "ciencias-natureza": 100,
+    };
+
+    if (!disciplineOffsets.hasOwnProperty(discipline)) {
+      return res.status(400).json({ message: "Disciplina não reconhecida." });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+
+    const offset = user.offsets[discipline];
+    const questionOffset = disciplineOffsets[discipline] + offset;
     const response = await axios.get(
-      `https://api.enem.dev/v1/exams/${year}/questions/${questionId}`
+      `https://api.enem.dev/v1/exams/${year}/questions/${questionOffset}`
     );
 
     if (!response.data) {
@@ -35,6 +55,9 @@ exports.getQuestion = async (req, res) => {
         text: alt.text,
       })),
     };
+
+    user.offsets[discipline] += 1;
+    await user.save();
 
     res.status(200).json(question);
   } catch (error) {
@@ -93,8 +116,19 @@ exports.getQuestionsByYearAndDiscipline = async (req, res) => {
 
 exports.checkAnswer = async (req, res) => {
   try {
-    const { year, questionId, userAnswer } = req.body;
-    const userId = req.user.id; // Assuming req.user contains the authenticated user's information
+    const { year, discipline, userAnswer } = req.body;
+    const userId = req.user.id;
+
+    const disciplineOffsets = {
+      matematica: 150,
+      linguagens: 0,
+      "ciencias-humanas": 46,
+      "ciencias-natureza": 100,
+    };
+
+    if (!disciplineOffsets.hasOwnProperty(discipline)) {
+      return res.status(400).json({ message: "Disciplina não reconhecida." });
+    }
 
     const user = await User.findById(userId);
     if (!user) {
@@ -108,8 +142,11 @@ exports.checkAnswer = async (req, res) => {
       });
     }
 
+    const offset = user.offsets[discipline];
+    const questionOffset = disciplineOffsets[discipline] + offset;
+
     const response = await axios.get(
-      `https://api.enem.dev/v1/exams/${year}/questions/${questionId}`
+      `https://api.enem.dev/v1/exams/${year}/questions/${questionOffset}`
     );
     const question = response.data;
 

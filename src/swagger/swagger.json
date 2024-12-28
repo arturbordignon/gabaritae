@@ -259,7 +259,6 @@
         }
       }
     },
-
     "/profile/me": {
       "get": {
         "summary": "Obter perfil do usuário",
@@ -454,31 +453,29 @@
         }
       }
     },
-    "/simulado/question/{year}/{questionId}": {
-      "get": {
-        "summary": "Obter questão específica",
+    "/simulado/question": {
+      "post": {
+        "summary": "Obter questão específica por disciplina",
         "tags": ["Simulado"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "year",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Ano da questão"
-          },
-          {
-            "in": "path",
-            "name": "questionId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "ID da questão"
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "year": { "type": "integer" },
+                  "discipline": {
+                    "type": "string",
+                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
+                  }
+                },
+                "required": ["year", "discipline"]
+              }
+            }
           }
-        ],
+        },
         "responses": {
           "200": {
             "description": "Questão retornada com sucesso",
@@ -523,10 +520,13 @@
                 "type": "object",
                 "properties": {
                   "year": { "type": "integer" },
-                  "questionId": { "type": "string" },
+                  "discipline": {
+                    "type": "string",
+                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
+                  },
                   "userAnswer": { "type": "string" }
                 },
-                "required": ["year", "questionId", "userAnswer"]
+                "required": ["year", "discipline", "userAnswer"]
               }
             }
           }
