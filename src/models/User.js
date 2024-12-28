@@ -9,8 +9,16 @@ const userSchema = new mongoose.Schema({
   category: { type: String, enum: ["ENEM"], required: true },
   resetPasswordCode: { type: String },
   resetPasswordExpire: { type: Date },
-  vidas: { type: Number, default: 10 },
-  proximaVida: { type: Date },
+  vidas: {
+    type: Number,
+    default: 10,
+    min: 0,
+    max: 10,
+  },
+  proximaVida: {
+    type: Date,
+    default: null,
+  },
   points: { type: Number, default: 0 },
 });
 

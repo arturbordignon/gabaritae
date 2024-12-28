@@ -454,6 +454,111 @@
         }
       }
     },
+    "/simulado/question/{year}/{questionId}": {
+      "get": {
+        "summary": "Obter questão específica",
+        "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Ano da questão"
+          },
+          {
+            "in": "path",
+            "name": "questionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID da questão"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Questão retornada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "context": { "type": "string" },
+                    "alternatives": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "letter": { "type": "string" },
+                          "text": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Questão não encontrada" },
+          "500": { "description": "Erro interno do servidor" }
+        }
+      }
+    },
+    "/simulado/check-answer": {
+      "post": {
+        "summary": "Verificar resposta do usuário",
+        "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "year": { "type": "integer" },
+                  "questionId": { "type": "string" },
+                  "userAnswer": { "type": "string" }
+                },
+                "required": ["year", "questionId", "userAnswer"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta verificada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "correct": { "type": "boolean" },
+                    "correctAnswer": { "type": "string" },
+                    "vidasRestantes": { "type": "integer" },
+                    "points": { "type": "integer" },
+                    "proximaVida": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Sem vidas disponíveis" },
+          "404": { "description": "Usuário não encontrado" },
+          "500": { "description": "Erro interno do servidor" }
+        }
+      }
+    },
     "/gamification/": {
       "get": {
         "summary": "Obter nível e pontos do usuário",
