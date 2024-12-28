@@ -59,7 +59,7 @@ exports.getQuestion = async (req, res) => {
     user.offsets[discipline] += 1;
     await user.save();
 
-    res.status(200).json(question);
+    res.status(200).json({ question, questionNumber: questionOffset });
   } catch (error) {
     if (error.response && error.response.status === 404) {
       return res.status(404).json({ message: "Questão não encontrada." });
@@ -116,19 +116,8 @@ exports.getQuestionsByYearAndDiscipline = async (req, res) => {
 
 exports.checkAnswer = async (req, res) => {
   try {
-    const { year, discipline, userAnswer } = req.body;
+    const { year, questionNumber, userAnswer } = req.body;
     const userId = req.user.id;
-
-    const disciplineOffsets = {
-      matematica: 150,
-      linguagens: 0,
-      "ciencias-humanas": 46,
-      "ciencias-natureza": 100,
-    };
-
-    if (!disciplineOffsets.hasOwnProperty(discipline)) {
-      return res.status(400).json({ message: "Disciplina não reconhecida." });
-    }
 
     const user = await User.findById(userId);
     if (!user) {
@@ -142,11 +131,8 @@ exports.checkAnswer = async (req, res) => {
       });
     }
 
-    const offset = user.offsets[discipline];
-    const questionOffset = disciplineOffsets[discipline] + offset;
-
     const response = await axios.get(
-      `https://api.enem.dev/v1/exams/${year}/questions/${questionOffset}`
+      `https://api.enem.dev/v1/exams/${year}/questions/${questionNumber}`
     );
     const question = response.data;
 

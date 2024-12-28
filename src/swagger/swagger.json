@@ -484,19 +484,25 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "id": { "type": "string" },
-                    "title": { "type": "string" },
-                    "context": { "type": "string" },
-                    "alternatives": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "letter": { "type": "string" },
-                          "text": { "type": "string" }
+                    "question": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "title": { "type": "string" },
+                        "context": { "type": "string" },
+                        "alternatives": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "letter": { "type": "string" },
+                              "text": { "type": "string" }
+                            }
+                          }
                         }
                       }
-                    }
+                    },
+                    "questionNumber": { "type": "integer" }
                   }
                 }
               }
@@ -520,13 +526,10 @@
                 "type": "object",
                 "properties": {
                   "year": { "type": "integer" },
-                  "discipline": {
-                    "type": "string",
-                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
-                  },
+                  "questionNumber": { "type": "integer" },
                   "userAnswer": { "type": "string" }
                 },
-                "required": ["year", "discipline", "userAnswer"]
+                "required": ["year", "questionNumber", "userAnswer"]
               }
             }
           }
