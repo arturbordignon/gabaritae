@@ -369,6 +369,7 @@
     "/simulado/start": {
       "post": {
         "summary": "Start a new simulado",
+        "tags": ["Simulado"],
         "requestBody": {
           "required": true,
           "content": {
@@ -555,6 +556,7 @@
     "/simulado/{discipline}/{simuladoNumber}": {
       "get": {
         "summary": "Get simulado details by discipline and simulado number",
+        "tags": ["Simulado"],
         "parameters": [
           {
             "name": "discipline",
