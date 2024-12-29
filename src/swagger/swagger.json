@@ -381,7 +381,33 @@
                   "properties": {
                     "topics": {
                       "type": "array",
-                      "items": { "type": "string" }
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": { "type": "string" },
+                          "year": { "type": "integer" },
+                          "disciplines": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": { "type": "string" },
+                                "value": { "type": "string" }
+                              }
+                            }
+                          },
+                          "languages": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": { "type": "string" },
+                                "value": { "type": "string" }
+                              }
+                            }
+                          }
+                        }
+                      }
                     },
                     "simuladosRealizados": {
                       "type": "object",
@@ -398,6 +424,91 @@
                       }
                     },
                     "vidasRestantes": { "type": "integer" }
+                  },
+                  "example": {
+                    "topics": [
+                      {
+                        "title": "ENEM 2023",
+                        "year": 2023,
+                        "disciplines": [
+                          {
+                            "label": "Ciências Humanas e suas Tecnologias",
+                            "value": "ciencias-humanas"
+                          },
+                          {
+                            "label": "Ciências da Natureza e suas Tecnologias",
+                            "value": "ciencias-natureza"
+                          },
+                          {
+                            "label": "Linguagens, Códigos e suas Tecnologias",
+                            "value": "linguagens"
+                          },
+                          {
+                            "label": "Matemática e suas Tecnologias",
+                            "value": "matematica"
+                          }
+                        ],
+                        "languages": [
+                          {
+                            "label": "Espanhol",
+                            "value": "espanhol"
+                          },
+                          {
+                            "label": "Inglês",
+                            "value": "ingles"
+                          }
+                        ]
+                      },
+                      {
+                        "title": "ENEM 2022",
+                        "year": 2022,
+                        "disciplines": [
+                          {
+                            "label": "Ciências Humanas e suas Tecnologias",
+                            "value": "ciencias-humanas"
+                          },
+                          {
+                            "label": "Ciências da Natureza e suas Tecnologias",
+                            "value": "ciencias-natureza"
+                          },
+                          {
+                            "label": "Linguagens, Códigos e suas Tecnologias",
+                            "value": "linguagens"
+                          },
+                          {
+                            "label": "Matemática e suas Tecnologias",
+                            "value": "matematica"
+                          }
+                        ],
+                        "languages": [
+                          {
+                            "label": "Espanhol",
+                            "value": "espanhol"
+                          },
+                          {
+                            "label": "Inglês",
+                            "value": "ingles"
+                          }
+                        ]
+                      }
+                    ],
+                    "simuladosRealizados": {
+                      "2023": [
+                        {
+                          "discipline": "matematica",
+                          "simuladoNumber": 1,
+                          "status": "incompleto"
+                        }
+                      ],
+                      "2022": [
+                        {
+                          "discipline": "ciencias-humanas",
+                          "simuladoNumber": 1,
+                          "status": "completo"
+                        }
+                      ]
+                    },
+                    "vidasRestantes": 8
                   }
                 }
               }
