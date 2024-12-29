@@ -9,11 +9,11 @@ const recarregarVidas = async (user) => {
     const proximaVidaMoment = moment(user.proximaVida);
     console.log(`Proxima vida: ${proximaVidaMoment.toISOString()}`);
     const horasDecorridas = now.diff(proximaVidaMoment, "hours");
-    const vidasRecuperadas = Math.floor(horasDecorridas / 3);
+    const vidasRecuperadas = Math.floor(horasDecorridas / 3); // 1 vida a cada 3 horas
     console.log(`Horas decorridas: ${horasDecorridas}`);
     console.log(`Vidas recuperadas: ${vidasRecuperadas}`);
     user.vidas = Math.min(10, user.vidas + vidasRecuperadas);
-    user.proximaVida = user.vidas < 10 ? now.add(3, "hours").toDate() : null;
+    user.proximaVida = user.vidas < 10 ? now.add(3, "hours").toDate() : null; // Próxima vida em 3 horas
     console.log(`Nova proxima vida: ${user.proximaVida}`);
     await user.save();
   } else {
@@ -56,6 +56,7 @@ exports.getSimulado = async (req, res) => {
       return res.status(404).json({ message: "Usuário não encontrado." });
     }
 
+    // Recarregar vidas
     await recarregarVidas(user);
 
     if (user.vidas <= 0) {
@@ -77,6 +78,7 @@ exports.getSimulado = async (req, res) => {
     }
 
     if (userAnswer === null) {
+      // Retornar a questão para o front-end
       return res.status(200).json({
         question: {
           id: question.index,
@@ -102,7 +104,7 @@ exports.getSimulado = async (req, res) => {
       user.points = Math.max(0, user.points - 1);
 
       if (user.vidas === 0) {
-        user.proximaVida = moment().add(3, "hours").toDate();
+        user.proximaVida = moment().add(3, "hours").toDate(); // Próxima vida em 3 horas
       }
     } else {
       user.points += 1;
@@ -161,7 +163,15 @@ exports.getUserSimuladoHistory = async (req, res) => {
       return res.status(404).json({ message: "Usuário não encontrado." });
     }
 
-    res.status(200).json({ simulados: user.simulados });
+    // Contar simulados terminados
+    const simuladosTerminados = user.simulados.filter(
+      (simulado) => simulado.questions.length === 10
+    ).length;
+
+    // Limitar a quantidade de simulados a 10
+    const simulados = user.simulados.slice(0, 10);
+
+    res.status(200).json({ simulados, simuladosTerminados });
   } catch (error) {
     console.error(`Erro ao buscar histórico: ${error.message}`);
     res.status(500).json({ message: "Erro ao buscar histórico.", error: error.message });
@@ -177,6 +187,7 @@ exports.checkVidas = async (req, res) => {
       return res.status(404).json({ message: "Usuário não encontrado." });
     }
 
+    // Recarregar vidas
     await recarregarVidas(user);
 
     res.status(200).json({
@@ -186,5 +197,42 @@ exports.checkVidas = async (req, res) => {
   } catch (error) {
     console.error(`Erro ao verificar vidas: ${error.message}`);
     res.status(500).json({ message: "Erro ao verificar vidas.", error: error.message });
+  }
+};
+
+exports.getSimuladoStatus = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+
+    // Recarregar vidas
+    await recarregarVidas(user);
+
+    // Contar simulados terminados
+    const simuladosTerminados = user.simulados.filter(
+      (simulado) => simulado.questions.length === 10
+    ).length;
+
+    // Limitar a quantidade de simulados a 10
+    const simulados = user.simulados.slice(0, 10);
+
+    // Obter anos do ENEM disponíveis
+    const response = await axios.get("https://api.enem.dev/v1/exams");
+    const anosDisponiveis = response.data.map((exam) => exam.year);
+
+    res.status(200).json({
+      anosDisponiveis,
+      simulados,
+      simuladosTerminados,
+      vidasRestantes: user.vidas,
+      proximaVida: user.proximaVida,
+    });
+  } catch (error) {
+    console.error(`Erro ao buscar status do simulado: ${error.message}`);
+    res.status(500).json({ message: "Erro ao buscar status do simulado.", error: error.message });
   }
 };

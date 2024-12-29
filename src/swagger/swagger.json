@@ -391,6 +391,76 @@
         }
       }
     },
+    "/simulado/status": {
+      "get": {
+        "summary": "Obter status do simulado",
+        "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Status do simulado retornado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "anosDisponiveis": {
+                      "type": "array",
+                      "items": { "type": "integer" }
+                    },
+                    "simulados": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "year": { "type": "integer" },
+                          "discipline": { "type": "string" },
+                          "simuladoNumber": { "type": "integer" },
+                          "questions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "questionId": { "type": "string" },
+                                "title": { "type": "string" },
+                                "context": { "type": "string" },
+                                "alternatives": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "letter": { "type": "string" },
+                                      "text": { "type": "string" },
+                                      "isCorrect": { "type": "boolean" }
+                                    }
+                                  }
+                                },
+                                "userAnswer": { "type": "string" },
+                                "correctAnswer": { "type": "string" },
+                                "responseTime": { "type": "integer" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "simuladosTerminados": { "type": "integer" },
+                    "vidasRestantes": { "type": "integer" },
+                    "proximaVida": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Usuário não encontrado" },
+          "500": { "description": "Erro ao buscar status do simulado" }
+        }
+      }
+    },
     "/simulado/simulado": {
       "post": {
         "summary": "Obter questão específica, verificar resposta e salvar histórico",
