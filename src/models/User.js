@@ -1,6 +1,29 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
+const alternativeSchema = new mongoose.Schema({
+  letter: { type: String, required: true },
+  text: { type: String, required: true },
+  isCorrect: { type: Boolean, required: true },
+});
+
+const questionSchema = new mongoose.Schema({
+  questionId: { type: Number, required: true },
+  title: { type: String, required: true },
+  context: { type: String, required: true },
+  alternatives: [alternativeSchema],
+  userAnswer: { type: String, required: true },
+  correctAnswer: { type: String, required: true },
+  responseTime: { type: Number, required: true },
+});
+
+const simuladoSchema = new mongoose.Schema({
+  year: { type: Number, required: true },
+  discipline: { type: String, required: true },
+  simuladoNumber: { type: Number, required: true },
+  questions: [questionSchema],
+});
+
 const userSchema = new mongoose.Schema({
   completeName: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -26,6 +49,7 @@ const userSchema = new mongoose.Schema({
     "ciencias-humanas": { type: Number, default: 0 },
     "ciencias-natureza": { type: Number, default: 0 },
   },
+  simulados: [simuladoSchema],
 });
 
 userSchema.pre("save", async function (next) {

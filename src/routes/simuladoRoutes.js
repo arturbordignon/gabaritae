@@ -1,9 +1,8 @@
 const express = require("express");
 const {
+  getSimulado,
+  getUserSimuladoHistory,
   listTopics,
-  getQuestionsByYearAndDiscipline,
-  getQuestion,
-  checkAnswer,
   checkVidas,
 } = require("../controllers/simuladoController");
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -11,9 +10,8 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const router = express.Router();
 
 router.get("/topics", listTopics);
-router.post("/questions", getQuestionsByYearAndDiscipline);
-router.post("/question", authMiddleware, getQuestion);
-router.post("/check-answer", authMiddleware, checkAnswer);
+router.post("/simulado", authMiddleware, getSimulado);
+router.get("/history", authMiddleware, getUserSimuladoHistory);
 router.get("/check-vidas", authMiddleware, checkVidas);
 
 module.exports = router;

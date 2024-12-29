@@ -8,7 +8,6 @@ const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const simuladoRoutes = require("./routes/simuladoRoutes");
 const gamificationRoutes = require("./routes/gamificationRoutes");
-const historyRoutes = require("./routes/historyRoutes");
 require("dotenv").config();
 const homeRoutes = require("./routes/homeRoutes");
 
@@ -28,7 +27,6 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/home", homeRoutes);
 app.use("/api/simulado", simuladoRoutes);
 app.use("/api/gamification", gamificationRoutes);
-app.use("/api/history", historyRoutes);
 
 app.use(errorHandler);
 

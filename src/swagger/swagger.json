@@ -391,71 +391,9 @@
         }
       }
     },
-    "/simulado/questions": {
+    "/simulado/simulado": {
       "post": {
-        "summary": "Listar questões por ano e disciplina",
-        "tags": ["Simulado"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "year": { "type": "integer" },
-                  "discipline": {
-                    "type": "string",
-                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
-                  }
-                },
-                "required": ["year", "discipline"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Questões listadas com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "questions": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": { "type": "string" },
-                          "title": { "type": "string" },
-                          "context": { "type": "string" },
-                          "alternatives": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "letter": { "type": "string" },
-                                "text": { "type": "string" },
-                                "isCorrect": { "type": "boolean" }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": { "description": "Disciplina não reconhecida" },
-          "500": { "description": "Erro interno do servidor" }
-        }
-      }
-    },
-    "/simulado/question": {
-      "post": {
-        "summary": "Obter questão específica por disciplina",
+        "summary": "Obter questão específica, verificar resposta e salvar histórico",
         "tags": ["Simulado"],
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
@@ -469,16 +407,19 @@
                   "discipline": {
                     "type": "string",
                     "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
-                  }
+                  },
+                  "simuladoNumber": { "type": "integer" },
+                  "userAnswer": { "type": "string", "nullable": true },
+                  "responseTime": { "type": "integer", "nullable": true }
                 },
-                "required": ["year", "discipline"]
+                "required": ["year", "discipline", "simuladoNumber"]
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Questão retornada com sucesso",
+            "description": "Questão retornada com sucesso e resposta verificada",
             "content": {
               "application/json": {
                 "schema": {
@@ -502,46 +443,7 @@
                         }
                       }
                     },
-                    "questionNumber": { "type": "integer" }
-                  }
-                }
-              }
-            }
-          },
-          "404": { "description": "Questão não encontrada" },
-          "500": { "description": "Erro interno do servidor" }
-        }
-      }
-    },
-    "/simulado/check-answer": {
-      "post": {
-        "summary": "Verificar resposta do usuário",
-        "tags": ["Simulado"],
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "year": { "type": "integer" },
-                  "questionNumber": { "type": "integer" },
-                  "userAnswer": { "type": "string" }
-                },
-                "required": ["year", "questionNumber", "userAnswer"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Resposta verificada com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
+                    "questionNumber": { "type": "integer" },
                     "correct": { "type": "boolean" },
                     "correctAnswer": { "type": "string" },
                     "vidasRestantes": { "type": "integer" },
@@ -559,6 +461,93 @@
           "400": { "description": "Sem vidas disponíveis" },
           "404": { "description": "Usuário não encontrado" },
           "500": { "description": "Erro interno do servidor" }
+        }
+      }
+    },
+    "/simulado/history": {
+      "get": {
+        "summary": "Obter histórico dos simulados do usuário",
+        "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Histórico retornado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "simulados": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "year": { "type": "integer" },
+                          "discipline": { "type": "string" },
+                          "simuladoNumber": { "type": "integer" },
+                          "questions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "questionId": { "type": "string" },
+                                "title": { "type": "string" },
+                                "context": { "type": "string" },
+                                "alternatives": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "letter": { "type": "string" },
+                                      "text": { "type": "string" },
+                                      "isCorrect": { "type": "boolean" }
+                                    }
+                                  }
+                                },
+                                "userAnswer": { "type": "string" },
+                                "correctAnswer": { "type": "string" },
+                                "responseTime": { "type": "integer" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Erro ao buscar histórico" }
+        }
+      }
+    },
+    "/simulado/check-vidas": {
+      "get": {
+        "summary": "Verificar vidas do usuário",
+        "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Vidas verificadas com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "vidas": { "type": "integer" },
+                    "proximaVida": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Usuário não encontrado" },
+          "500": { "description": "Erro ao verificar vidas" }
         }
       }
     },
@@ -621,142 +610,6 @@
             }
           },
           "500": { "description": "Erro ao atualizar pontos" }
-        }
-      }
-    },
-    "/history/save": {
-      "post": {
-        "summary": "Salvar histórico do simulado",
-        "tags": ["Histórico"],
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "questions": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "questionId": { "type": "string" },
-                        "numeroQuestao": { "type": "integer" },
-                        "discipline": { "type": "string" },
-                        "correct": { "type": "boolean" },
-                        "responseTime": { "type": "integer" },
-                        "userAnswer": { "type": "string" },
-                        "correctAnswer": { "type": "string" }
-                      }
-                    }
-                  },
-                  "totalQuestions": { "type": "integer" },
-                  "correctAnswers": { "type": "integer" },
-                  "incorrectAnswers": { "type": "integer" },
-                  "totalTime": { "type": "integer" }
-                },
-                "required": [
-                  "questions",
-                  "totalQuestions",
-                  "correctAnswers",
-                  "incorrectAnswers",
-                  "totalTime"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": { "description": "Histórico salvo com sucesso" },
-          "500": { "description": "Erro ao salvar histórico" }
-        }
-      }
-    },
-    "/history/user": {
-      "get": {
-        "summary": "Obter histórico do usuário",
-        "tags": ["Histórico"],
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "Histórico retornado com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "histories": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "userId": { "type": "string" },
-                          "totalQuestions": { "type": "integer" },
-                          "correctAnswers": { "type": "integer" },
-                          "incorrectAnswers": { "type": "integer" },
-                          "totalTime": { "type": "integer" }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": { "description": "Erro ao buscar histórico" }
-        }
-      }
-    },
-    "/history/detailed": {
-      "get": {
-        "summary": "Obter histórico detalhado do usuário",
-        "tags": ["Histórico"],
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "Histórico detalhado retornado com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "userId": { "type": "string" },
-                      "questions": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "questionId": { "type": "string" },
-                            "context": { "type": "string" },
-                            "title": { "type": "string" },
-                            "alternatives": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "letter": { "type": "string" },
-                                  "text": { "type": "string" },
-                                  "isCorrect": { "type": "boolean" }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      },
-                      "totalQuestions": { "type": "integer" },
-                      "correctAnswers": { "type": "integer" },
-                      "incorrectAnswers": { "type": "integer" },
-                      "totalTime": { "type": "integer" }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": { "description": "Erro interno do servidor" }
         }
       }
     }
