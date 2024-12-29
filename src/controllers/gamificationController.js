@@ -11,7 +11,7 @@ exports.getUserLevelAndPoints = async (req, res) => {
     const level = Math.floor(user.points / 20) + 1;
     res.status(200).json({ level, points: user.points });
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar dados de gamificação.", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -29,6 +29,6 @@ exports.updatePoints = async (req, res) => {
 
     res.status(200).json({ message: "Pontos atualizados com sucesso.", points: user.points });
   } catch (error) {
-    res.status(500).json({ message: "Erro ao atualizar pontos.", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };

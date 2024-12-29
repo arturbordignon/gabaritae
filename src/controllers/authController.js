@@ -32,7 +32,7 @@ exports.registerUser = async (req, res) => {
     res.status(201).json({ token });
   } catch (error) {
     console.error(`Erro ao registrar usuário: ${error.message}`);
-    res.status(500).json({ message: "Erro ao registrar usuário.", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -57,7 +57,7 @@ exports.loginUser = async (req, res) => {
     res.status(200).json({ token, message: "Login realizado com sucesso." });
   } catch (error) {
     logger.error(`Erro ao fazer login: ${error.message}`);
-    res.status(500).json({ message: "Erro ao fazer login." });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -103,7 +103,7 @@ exports.forgotPassword = async (req, res) => {
     res.status(200).json({ message: "Email enviado com sucesso!" });
   } catch (error) {
     logger.error(`Erro ao processar solicitação de redefinição de senha: ${error.message}`);
-    res.status(500).json({ message: "Erro ao processar solicitação." });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -150,6 +150,6 @@ exports.resetPassword = async (req, res) => {
     res.status(200).json({ message: "Senha redefinida com sucesso." });
   } catch (error) {
     logger.error(`Erro ao redefinir senha: ${error.message}`);
-    res.status(500).json({ message: "Erro ao redefinir senha.", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };

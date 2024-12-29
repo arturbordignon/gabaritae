@@ -131,7 +131,7 @@ exports.startSimulado = async (req, res) => {
     });
   } catch (error) {
     console.error("Start simulado error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -281,7 +281,7 @@ exports.submitAnswer = async (req, res) => {
     }
   } catch (error) {
     console.error("Submit answer error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -300,7 +300,7 @@ exports.getSimuladoStatus = async (req, res) => {
       discipline: user.currentSimulado.discipline,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -319,6 +319,6 @@ exports.getSimuladoDetails = async (req, res) => {
 
     return res.json(simulado);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };

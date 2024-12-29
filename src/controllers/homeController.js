@@ -17,6 +17,6 @@ exports.getHomeDetails = async (req, res) => {
       level,
     });
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar dados da home.", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };

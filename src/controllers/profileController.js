@@ -17,7 +17,7 @@ exports.getProfile = async (req, res) => {
 
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar perfil.", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -46,7 +46,7 @@ exports.updateProfile = async (req, res) => {
 
     res.status(200).json({ message: "Perfil atualizado com sucesso.", user });
   } catch (error) {
-    res.status(500).json({ message: "Erro ao atualizar perfil.", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -69,6 +69,6 @@ exports.changePassword = async (req, res) => {
 
     res.status(200).json({ message: "Senha alterada com sucesso." });
   } catch (error) {
-    res.status(500).json({ message: "Erro ao alterar senha.", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
