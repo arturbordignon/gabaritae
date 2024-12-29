@@ -369,8 +369,6 @@
     "/simulado/start": {
       "post": {
         "summary": "Start a new simulado",
-        "tags": ["Simulado"],
-        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -379,10 +377,7 @@
                 "type": "object",
                 "properties": {
                   "year": { "type": "integer" },
-                  "discipline": {
-                    "type": "string",
-                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
-                  }
+                  "discipline": { "type": "string" }
                 },
                 "required": ["year", "discipline"]
               }
@@ -557,6 +552,100 @@
         }
       }
     },
+    "/simulado/{discipline}/{simuladoNumber}": {
+      "get": {
+        "summary": "Get simulado details by discipline and simulado number",
+        "parameters": [
+          {
+            "name": "discipline",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "simuladoNumber",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Simulado details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "discipline": { "type": "string" },
+                    "simuladoNumber": { "type": "integer" },
+                    "year": { "type": "integer" },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": { "type": "string" },
+                          "index": { "type": "integer" },
+                          "year": { "type": "integer" },
+                          "title": { "type": "string" },
+                          "context": { "type": "string" },
+                          "files": {
+                            "type": "array",
+                            "items": { "type": "string" }
+                          },
+                          "alternativesIntroduction": { "type": "string" },
+                          "alternatives": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "letter": { "type": "string" },
+                                "text": { "type": "string" },
+                                "file": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              }
+                            }
+                          },
+                          "correctAlternative": { "type": "string" },
+                          "userAnswer": { "type": "string" },
+                          "isCorrect": { "type": "boolean" },
+                          "responseTime": { "type": "integer" },
+                          "answeredAt": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    },
+                    "startedAt": { "type": "string", "format": "date-time" },
+                    "completedAt": { "type": "string", "format": "date-time" },
+                    "status": { "type": "string" },
+                    "score": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulado not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/simulado/status": {
       "get": {
         "summary": "Get the current status of the simulado",
@@ -615,179 +704,6 @@
                 },
                 "example": {
                   "error": "Erro ao buscar status do simulado"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/simulado/{discipline}/{simuladoNumber}": {
-      "get": {
-        "summary": "Get details of a specific simulado",
-        "tags": ["Simulado"],
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          {
-            "name": "discipline",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
-            }
-          },
-          {
-            "name": "simuladoNumber",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Simulado details retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "discipline": { "type": "string" },
-                    "simuladoNumber": { "type": "integer" },
-                    "year": { "type": "integer" },
-                    "startedAt": { "type": "string", "format": "date-time" },
-                    "completedAt": { "type": "string", "format": "date-time" },
-                    "status": { "type": "string", "enum": ["active", "completed", "failed"] },
-                    "questions": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "questionId": { "type": "string" },
-                          "index": { "type": "integer" },
-                          "year": { "type": "integer" },
-                          "title": { "type": "string" },
-                          "context": { "type": "string" },
-                          "files": {
-                            "type": "array",
-                            "items": { "type": "string" }
-                          },
-                          "correctAlternative": { "type": "string" },
-                          "alternativesIntroduction": { "type": "string" },
-                          "alternatives": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "letter": { "type": "string" },
-                                "text": { "type": "string" },
-                                "file": { "type": "string" },
-                                "isCorrect": { "type": "boolean" }
-                              }
-                            }
-                          },
-                          "userAnswer": { "type": "string" },
-                          "isCorrect": { "type": "boolean" },
-                          "responseTime": { "type": "integer" },
-                          "answeredAt": { "type": "string", "format": "date-time" }
-                        }
-                      }
-                    },
-                    "score": { "type": "integer" }
-                  }
-                },
-                "example": {
-                  "discipline": "matematica",
-                  "simuladoNumber": 1,
-                  "year": 2022,
-                  "startedAt": "2023-10-01T10:00:00Z",
-                  "completedAt": "2023-10-01T10:30:00Z",
-                  "status": "completed",
-                  "questions": [
-                    {
-                      "questionId": "60d21b4667d0d8992e610c86",
-                      "index": 0,
-                      "year": 2022,
-                      "title": "Questão 1 - ENEM 2020",
-                      "context": "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
-                      "files": [
-                        "https://enem.dev/2020/questions/1-ingles/6e1ca12e-9bc4-472b-8809-84e7e394714a.png"
-                      ],
-                      "correctAlternative": "A",
-                      "alternativesIntroduction": "Com base no texto, selecione a alternativa correta",
-                      "alternatives": [
-                        {
-                          "letter": "A",
-                          "text": "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
-                          "file": "https://enem.dev/2020/questions/1-ingles/6e1ca12e-9bc4-472b-8809-84e7e394714a.png",
-                          "isCorrect": true
-                        }
-                      ],
-                      "userAnswer": "C",
-                      "isCorrect": true,
-                      "responseTime": 120000,
-                      "answeredAt": "2023-10-01T10:02:00Z"
-                    },
-                    {
-                      "questionId": "60d21b4667d0d8992e610c87",
-                      "index": 1,
-                      "year": 2022,
-                      "title": "Questão 2 - ENEM 2020",
-                      "context": "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
-                      "files": [
-                        "https://enem.dev/2020/questions/1-ingles/6e1ca12e-9bc4-472b-8809-84e7e394714a.png"
-                      ],
-                      "correctAlternative": "B",
-                      "alternativesIntroduction": "Com base no texto, selecione a alternativa correta",
-                      "alternatives": [
-                        {
-                          "letter": "A",
-                          "text": "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
-                          "file": "https://enem.dev/2020/questions/1-ingles/6e1ca12e-9bc4-472b-8809-84e7e394714a.png",
-                          "isCorrect": false
-                        }
-                      ],
-                      "userAnswer": "A",
-                      "isCorrect": false,
-                      "responseTime": 180000,
-                      "answeredAt": "2023-10-01T10:05:00Z"
-                    }
-                  ],
-                  "score": 1
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Simulado not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": { "type": "string" }
-                  }
-                },
-                "example": {
-                  "error": "Simulado não encontrado"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": { "type": "string" }
-                  }
-                },
-                "example": {
-                  "error": "Erro ao buscar detalhes do simulado"
                 }
               }
             }

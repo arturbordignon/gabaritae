@@ -28,13 +28,9 @@ const simuladoAttemptSchema = new mongoose.Schema({
   year: { type: Number, required: true },
   questions: [questionSchema],
   startedAt: { type: Date, default: Date.now },
-  completedAt: { type: Date },
-  status: {
-    type: String,
-    enum: ["active", "completed", "failed"],
-    default: "active",
-  },
-  score: { type: Number, default: 0 },
+  completedAt: Date,
+  status: { type: String, default: "active" },
+  score: Number,
 });
 
 const userSchema = new mongoose.Schema({
@@ -54,11 +50,17 @@ const userSchema = new mongoose.Schema({
     "ciencias-humanas": { type: Number, default: 0 },
     "ciencias-natureza": { type: Number, default: 0 },
   },
-  simuladoAttempts: [simuladoAttemptSchema],
+  simuladoAttempts: {
+    matematica: [simuladoAttemptSchema],
+    linguagens: [simuladoAttemptSchema],
+    "ciencias-humanas": [simuladoAttemptSchema],
+    "ciencias-natureza": [simuladoAttemptSchema],
+  },
   currentSimulado: {
     attemptId: mongoose.Schema.Types.ObjectId,
     questionIndex: Number,
     startedAt: Date,
+    discipline: String,
   },
 });
 
