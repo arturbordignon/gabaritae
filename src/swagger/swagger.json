@@ -366,232 +366,9 @@
         }
       }
     },
-    "/simulado/topics": {
-      "get": {
-        "summary": "Listar tópicos do ENEM",
-        "tags": ["Simulado"],
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "Tópicos listados com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "topics": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "title": { "type": "string" },
-                          "year": { "type": "integer" },
-                          "disciplines": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "label": { "type": "string" },
-                                "value": { "type": "string" }
-                              }
-                            }
-                          },
-                          "languages": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "label": { "type": "string" },
-                                "value": { "type": "string" }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "simuladosRealizados": {
-                      "type": "object",
-                      "additionalProperties": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "discipline": { "type": "string" },
-                            "simuladoNumber": { "type": "integer" },
-                            "status": { "type": "string", "enum": ["completo", "incompleto"] }
-                          }
-                        }
-                      }
-                    },
-                    "vidasRestantes": { "type": "integer" }
-                  },
-                  "example": {
-                    "topics": [
-                      {
-                        "title": "ENEM 2023",
-                        "year": 2023,
-                        "disciplines": [
-                          {
-                            "label": "Ciências Humanas e suas Tecnologias",
-                            "value": "ciencias-humanas"
-                          },
-                          {
-                            "label": "Ciências da Natureza e suas Tecnologias",
-                            "value": "ciencias-natureza"
-                          },
-                          {
-                            "label": "Linguagens, Códigos e suas Tecnologias",
-                            "value": "linguagens"
-                          },
-                          {
-                            "label": "Matemática e suas Tecnologias",
-                            "value": "matematica"
-                          }
-                        ],
-                        "languages": [
-                          {
-                            "label": "Espanhol",
-                            "value": "espanhol"
-                          },
-                          {
-                            "label": "Inglês",
-                            "value": "ingles"
-                          }
-                        ]
-                      },
-                      {
-                        "title": "ENEM 2022",
-                        "year": 2022,
-                        "disciplines": [
-                          {
-                            "label": "Ciências Humanas e suas Tecnologias",
-                            "value": "ciencias-humanas"
-                          },
-                          {
-                            "label": "Ciências da Natureza e suas Tecnologias",
-                            "value": "ciencias-natureza"
-                          },
-                          {
-                            "label": "Linguagens, Códigos e suas Tecnologias",
-                            "value": "linguagens"
-                          },
-                          {
-                            "label": "Matemática e suas Tecnologias",
-                            "value": "matematica"
-                          }
-                        ],
-                        "languages": [
-                          {
-                            "label": "Espanhol",
-                            "value": "espanhol"
-                          },
-                          {
-                            "label": "Inglês",
-                            "value": "ingles"
-                          }
-                        ]
-                      }
-                    ],
-                    "simuladosRealizados": {
-                      "2023": [
-                        {
-                          "discipline": "matematica",
-                          "simuladoNumber": 1,
-                          "status": "incompleto"
-                        }
-                      ],
-                      "2022": [
-                        {
-                          "discipline": "ciencias-humanas",
-                          "simuladoNumber": 1,
-                          "status": "completo"
-                        }
-                      ]
-                    },
-                    "vidasRestantes": 8
-                  }
-                }
-              }
-            }
-          },
-          "404": { "description": "Nenhum tópico encontrado" },
-          "500": { "description": "Erro interno do servidor" }
-        }
-      }
-    },
-    "/simulado/status": {
-      "get": {
-        "summary": "Obter status do simulado",
-        "tags": ["Simulado"],
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "Status do simulado retornado com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "anosDisponiveis": {
-                      "type": "array",
-                      "items": { "type": "integer" }
-                    },
-                    "simulados": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "year": { "type": "integer" },
-                          "discipline": { "type": "string" },
-                          "simuladoNumber": { "type": "integer" },
-                          "questions": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "questionId": { "type": "string" },
-                                "title": { "type": "string" },
-                                "context": { "type": "string" },
-                                "alternatives": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "object",
-                                    "properties": {
-                                      "letter": { "type": "string" },
-                                      "text": { "type": "string" },
-                                      "isCorrect": { "type": "boolean" }
-                                    }
-                                  }
-                                },
-                                "userAnswer": { "type": "string" },
-                                "correctAnswer": { "type": "string" },
-                                "responseTime": { "type": "integer" }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "simuladosTerminados": { "type": "integer" },
-                    "vidasRestantes": { "type": "integer" },
-                    "proximaVida": {
-                      "type": "string",
-                      "format": "date-time",
-                      "nullable": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": { "description": "Usuário não encontrado" },
-          "500": { "description": "Erro ao buscar status do simulado" }
-        }
-      }
-    },
-    "/simulado/simulado": {
+    "/simulado/start": {
       "post": {
-        "summary": "Obter questão específica, verificar resposta e salvar histórico",
+        "summary": "Start a new simulado",
         "tags": ["Simulado"],
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
@@ -605,154 +382,442 @@
                   "discipline": {
                     "type": "string",
                     "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
-                  },
-                  "simuladoNumber": { "type": "integer" },
-                  "userAnswer": { "type": "string", "nullable": true },
-                  "responseTime": { "type": "integer", "nullable": true }
+                  }
                 },
-                "required": ["year", "discipline", "simuladoNumber"]
+                "required": ["year", "discipline"]
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Questão retornada com sucesso e resposta verificada",
+            "description": "Simulado started successfully",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "question": {
-                      "type": "object",
-                      "properties": {
-                        "id": { "type": "string" },
-                        "title": { "type": "string" },
-                        "context": { "type": "string" },
-                        "files": {
-                          "type": "array",
-                          "items": { "type": "string" }
-                        },
-                        "alternativesIntroduction": { "type": "string" },
-                        "alternatives": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "letter": { "type": "string" },
-                              "text": { "type": "string" },
-                              "file": { "type": "string" }
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "questionNumber": { "type": "integer" },
-                    "correct": { "type": "boolean" },
-                    "correctAnswer": { "type": "string" },
-                    "vidasRestantes": { "type": "integer" },
-                    "points": { "type": "integer" },
-                    "proximaVida": {
-                      "type": "string",
-                      "format": "date-time",
-                      "nullable": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": { "description": "Sem vidas disponíveis" },
-          "404": { "description": "Usuário não encontrado" },
-          "500": { "description": "Erro interno do servidor" }
-        }
-      }
-    },
-    "/simulado/check-vidas": {
-      "get": {
-        "summary": "Verificar vidas do usuário",
-        "tags": ["Simulado"],
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "Vidas verificadas com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
+                    "simuladoId": { "type": "string" },
                     "vidas": { "type": "integer" },
-                    "proximaVida": {
-                      "type": "string",
-                      "format": "date-time",
-                      "nullable": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": { "description": "Usuário não encontrado" },
-          "500": { "description": "Erro ao verificar vidas" }
-        }
-      }
-    },
-    "/simulado/history": {
-      "get": {
-        "summary": "Obter histórico dos simulados do usuário",
-        "tags": ["Simulado"],
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "Histórico retornado com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "simulados": {
+                    "simuladoNumber": { "type": "integer" },
+                    "questions": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
+                          "questionId": { "type": "string" },
+                          "index": { "type": "integer" },
                           "year": { "type": "integer" },
-                          "discipline": { "type": "string" },
-                          "simuladoNumber": { "type": "integer" },
-                          "questions": {
+                          "title": { "type": "string" },
+                          "context": { "type": "string" },
+                          "files": {
+                            "type": "array",
+                            "items": { "type": "string" }
+                          },
+                          "alternatives": {
                             "type": "array",
                             "items": {
                               "type": "object",
                               "properties": {
-                                "questionId": { "type": "string" },
-                                "title": { "type": "string" },
-                                "context": { "type": "string" },
-                                "alternatives": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "object",
-                                    "properties": {
-                                      "letter": { "type": "string" },
-                                      "text": { "type": "string" },
-                                      "isCorrect": { "type": "boolean" }
-                                    }
-                                  }
-                                },
-                                "userAnswer": { "type": "string" },
-                                "correctAnswer": { "type": "string" },
-                                "responseTime": { "type": "integer" }
+                                "letter": { "type": "string" },
+                                "text": { "type": "string" },
+                                "file": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
                               }
                             }
                           }
                         }
                       }
+                    }
+                  }
+                },
+                "example": {
+                  "simuladoId": "507f1f77bcf86cd799439011",
+                  "vidas": 10,
+                  "simuladoNumber": 1,
+                  "questions": [
+                    {
+                      "questionId": "150",
+                      "index": 150,
+                      "year": 2023,
+                      "title": "Questão 150 - ENEM 2023",
+                      "context": "Dirigir após ingerir bebidas alcoólicas...",
+                      "files": [],
+                      "alternatives": [
+                        {
+                          "letter": "A",
+                          "text": "C = 0,9q",
+                          "file": null
+                        },
+                        {
+                          "letter": "B",
+                          "text": "C = 0,1q",
+                          "file": null
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulado/answer": {
+      "post": {
+        "summary": "Submit an answer for a simulado question",
+        "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "questionId": {
+                    "type": "string",
+                    "description": "ID of the question being answered"
+                  },
+                  "userAnswer": {
+                    "type": "string",
+                    "description": "User's selected alternative (A, B, C, D or E)"
+                  },
+                  "responseTime": {
+                    "type": "integer",
+                    "description": "Response time in seconds",
+                    "maximum": 300
+                  }
+                },
+                "required": ["questionId", "userAnswer", "responseTime"]
+              },
+              "example": {
+                "questionId": "150",
+                "userAnswer": "A",
+                "responseTime": 45
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Answer submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "correct": { "type": "boolean" },
+                    "vidasRestantes": { "type": "integer" },
+                    "isComplete": { "type": "boolean" },
+                    "currentQuestionIndex": {
+                      "type": "integer",
+                      "nullable": true
                     },
-                    "simuladosTerminados": { "type": "integer" }
+                    "answer": {
+                      "type": "object",
+                      "properties": {
+                        "userAnswer": { "type": "string" },
+                        "correctAnswer": { "type": "string" },
+                        "explanation": { "type": "string" }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "correct": false,
+                  "vidasRestantes": 9,
+                  "isComplete": false,
+                  "currentQuestionIndex": 1,
+                  "answer": {
+                    "userAnswer": "A",
+                    "correctAnswer": "B",
+                    "explanation": "A alternativa correta é B"
                   }
                 }
               }
             }
           },
-          "500": { "description": "Erro ao buscar histórico" }
+          "400": {
+            "description": "Error response when out of lives",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" },
+                    "vidasRestantes": { "type": "integer" },
+                    "proximaVida": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                "example": {
+                  "error": "Você perdeu todas as vidas! Tente novamente mais tarde.",
+                  "vidasRestantes": 0,
+                  "proximaVida": "2024-12-29T23:08:27.591Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active simulado found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "error": "Nenhum simulado ativo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulado/status": {
+      "get": {
+        "summary": "Get the current status of the simulado",
+        "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Simulado status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active": { "type": "boolean" },
+                    "simuladoNumber": { "type": "integer" },
+                    "currentQuestion": { "type": "integer" },
+                    "vidas": { "type": "integer" },
+                    "discipline": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "active": true,
+                  "simuladoNumber": 1,
+                  "currentQuestion": 3,
+                  "vidas": 8,
+                  "discipline": "matematica"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active simulado found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "error": "Nenhum simulado ativo"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "error": "Erro ao buscar status do simulado"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulado/{discipline}/{simuladoNumber}": {
+      "get": {
+        "summary": "Get details of a specific simulado",
+        "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "discipline",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
+            }
+          },
+          {
+            "name": "simuladoNumber",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Simulado details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "discipline": { "type": "string" },
+                    "simuladoNumber": { "type": "integer" },
+                    "year": { "type": "integer" },
+                    "startedAt": { "type": "string", "format": "date-time" },
+                    "completedAt": { "type": "string", "format": "date-time" },
+                    "status": { "type": "string", "enum": ["active", "completed", "failed"] },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": { "type": "string" },
+                          "index": { "type": "integer" },
+                          "year": { "type": "integer" },
+                          "title": { "type": "string" },
+                          "context": { "type": "string" },
+                          "files": {
+                            "type": "array",
+                            "items": { "type": "string" }
+                          },
+                          "correctAlternative": { "type": "string" },
+                          "alternativesIntroduction": { "type": "string" },
+                          "alternatives": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "letter": { "type": "string" },
+                                "text": { "type": "string" },
+                                "file": { "type": "string" },
+                                "isCorrect": { "type": "boolean" }
+                              }
+                            }
+                          },
+                          "userAnswer": { "type": "string" },
+                          "isCorrect": { "type": "boolean" },
+                          "responseTime": { "type": "integer" },
+                          "answeredAt": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    },
+                    "score": { "type": "integer" }
+                  }
+                },
+                "example": {
+                  "discipline": "matematica",
+                  "simuladoNumber": 1,
+                  "year": 2022,
+                  "startedAt": "2023-10-01T10:00:00Z",
+                  "completedAt": "2023-10-01T10:30:00Z",
+                  "status": "completed",
+                  "questions": [
+                    {
+                      "questionId": "60d21b4667d0d8992e610c86",
+                      "index": 0,
+                      "year": 2022,
+                      "title": "Questão 1 - ENEM 2020",
+                      "context": "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
+                      "files": [
+                        "https://enem.dev/2020/questions/1-ingles/6e1ca12e-9bc4-472b-8809-84e7e394714a.png"
+                      ],
+                      "correctAlternative": "A",
+                      "alternativesIntroduction": "Com base no texto, selecione a alternativa correta",
+                      "alternatives": [
+                        {
+                          "letter": "A",
+                          "text": "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
+                          "file": "https://enem.dev/2020/questions/1-ingles/6e1ca12e-9bc4-472b-8809-84e7e394714a.png",
+                          "isCorrect": true
+                        }
+                      ],
+                      "userAnswer": "C",
+                      "isCorrect": true,
+                      "responseTime": 120000,
+                      "answeredAt": "2023-10-01T10:02:00Z"
+                    },
+                    {
+                      "questionId": "60d21b4667d0d8992e610c87",
+                      "index": 1,
+                      "year": 2022,
+                      "title": "Questão 2 - ENEM 2020",
+                      "context": "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
+                      "files": [
+                        "https://enem.dev/2020/questions/1-ingles/6e1ca12e-9bc4-472b-8809-84e7e394714a.png"
+                      ],
+                      "correctAlternative": "B",
+                      "alternativesIntroduction": "Com base no texto, selecione a alternativa correta",
+                      "alternatives": [
+                        {
+                          "letter": "A",
+                          "text": "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
+                          "file": "https://enem.dev/2020/questions/1-ingles/6e1ca12e-9bc4-472b-8809-84e7e394714a.png",
+                          "isCorrect": false
+                        }
+                      ],
+                      "userAnswer": "A",
+                      "isCorrect": false,
+                      "responseTime": 180000,
+                      "answeredAt": "2023-10-01T10:05:00Z"
+                    }
+                  ],
+                  "score": 1
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulado not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "error": "Simulado não encontrado"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "error": "Erro ao buscar detalhes do simulado"
+                }
+              }
+            }
+          }
         }
       }
     },

@@ -2,245 +2,332 @@ const axios = require("axios");
 const User = require("../models/User");
 const moment = require("moment");
 
-const recarregarVidas = async (user) => {
-  const now = moment();
-  if (user.proximaVida && now.isSameOrAfter(user.proximaVida)) {
-    const proximaVidaMoment = moment(user.proximaVida);
-    const horasDecorridas = now.diff(proximaVidaMoment, "hours");
-    const vidasRecuperadas = Math.floor(horasDecorridas / 3);
-    user.vidas = Math.min(10, user.vidas + vidasRecuperadas);
-    user.proximaVida = user.vidas < 10 ? now.add(3, "hours").toDate() : null;
-    await user.save();
-  } else {
-    console.log("Não é hora de recarregar vidas ainda.");
-  }
+const QUESTIONS_PER_SIMULADO = 10;
+const MAX_SIMULADOS_PER_DISCIPLINE = 10;
+const MAX_ANSWER_TIME_SECONDS = 300;
+
+const disciplineOffsets = {
+  matematica: 150,
+  linguagens: 0,
+  "ciencias-humanas": 46,
+  "ciencias-natureza": 100,
 };
 
-exports.listTopics = async (req, res) => {
+const fetchQuestions = async (year, discipline) => {
   try {
-    const response = await axios.get("https://api.enem.dev/v1/exams");
-    if (!response.data || response.data.length === 0) {
-      return res.status(404).json({ message: "Nenhum tópico encontrado." });
-    }
+    const offset = disciplineOffsets[discipline];
+    const apiUrl = `https://api.enem.dev/v1/exams/${year}/questions`;
 
-    const userId = req.user.id;
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado." });
-    }
-
-    await recarregarVidas(user);
-
-    const simuladosRealizados = user.simulados.reduce((acc, simulado) => {
-      const { year, discipline, simuladoNumber, questions } = simulado;
-      const status = questions.length === 10 ? "completo" : "incompleto";
-      if (!acc[year]) {
-        acc[year] = [];
-      }
-      acc[year].push({ discipline, simuladoNumber, status });
-      return acc;
-    }, {});
-
-    res.status(200).json({
-      topics: response.data,
-      simuladosRealizados,
-      vidasRestantes: user.vidas,
+    const response = await axios.get(apiUrl, {
+      params: {
+        limit: QUESTIONS_PER_SIMULADO,
+        offset: offset,
+      },
     });
+
+    if (!response.data || !response.data.questions) {
+      throw new Error("Invalid response format from API");
+    }
+
+    // Debug log to verify API response
+    console.log(
+      "API Response Questions:",
+      response.data.questions.map((q) => ({
+        questionId: q.index,
+        correctAlternative: q.correctAlternative,
+      }))
+    );
+
+    return response.data.questions.map((question, index) => ({
+      questionId: question.index.toString(),
+      index: question.index,
+      year: question.year,
+      title: question.title,
+      context: question.context,
+      files: question.files || [],
+      alternatives: question.alternatives.map((alt) => ({
+        letter: alt.letter,
+        text: alt.text,
+        file: alt.file || null,
+      })),
+      correctAlternative: question.correctAlternative, // Ensure this is fetched
+    }));
   } catch (error) {
-    console.error("Erro ao listar tópicos:", error.message);
-    res.status(500).json({ message: "Erro ao listar tópicos.", error: error.message });
+    console.error("API Request failed:", error.response?.data || error.message);
+    throw error;
   }
 };
 
-exports.getSimulado = async (req, res) => {
+exports.startSimulado = async (req, res) => {
   try {
-    const { year, discipline, simuladoNumber, userAnswer, responseTime } = req.body;
-    const userId = req.user.id;
+    const { year, discipline } = req.body;
+    const user = await User.findById(req.user.id);
 
-    const disciplineOffsets = {
-      matematica: 150,
-      linguagens: 0,
-      "ciencias-humanas": 46,
-      "ciencias-natureza": 100,
-    };
-
-    if (!disciplineOffsets.hasOwnProperty(discipline)) {
-      return res.status(400).json({ message: "Disciplina não reconhecida." });
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado." });
-    }
-
-    await recarregarVidas(user);
-
-    if (user.vidas <= 0) {
-      return res.status(400).json({
-        message: "Sem vidas disponíveis.",
+    if (user.vidas < 1) {
+      return res.status(403).json({
+        error: "Sem vidas disponíveis",
         proximaVida: user.proximaVida,
       });
     }
 
-    const offset = user.offsets[discipline];
-    const questionOffset = disciplineOffsets[discipline] + offset;
-    const response = await axios.get(
-      `https://api.enem.dev/v1/exams/${year}/questions/${questionOffset}`
-    );
-    const question = response.data;
+    const completedCount = user.simuladoAttempts.filter(
+      (s) => s.discipline === discipline && s.status === "completed"
+    ).length;
 
-    if (!question) {
-      return res.status(404).json({ message: "Questão não encontrada." });
+    if (completedCount >= MAX_SIMULADOS_PER_DISCIPLINE) {
+      return res.status(400).json({ error: "Limite de simulados atingido" });
     }
 
-    if (userAnswer === null) {
-      return res.status(200).json({
-        question: {
-          id: question.index,
-          title: question.title,
-          context: question.context,
-          files: question.files,
-          alternativesIntroduction: question.alternativesIntroduction,
-          alternatives: question.alternatives.map((alt) => ({
-            letter: alt.letter,
-            text: alt.text,
-            file: alt.file,
-          })),
-        },
-        questionNumber: questionOffset,
-      });
+    const questions = await fetchQuestions(year, discipline);
+
+    const attempt = {
+      discipline,
+      simuladoNumber: completedCount + 1,
+      year,
+      questions: questions.map((q) => ({
+        questionId: q.questionId,
+        index: q.index,
+        year: q.year,
+        title: q.title || `Questão ${q.index} - ENEM ${q.year}`, // Ensure title exists
+        context: q.context || "", // Ensure context exists
+        files: q.files || [],
+        alternatives: q.alternatives.map((alt) => ({
+          letter: alt.letter,
+          text: alt.text,
+          file: alt.file || null,
+        })),
+        correctAlternative: q.correctAlternative, // Required field
+      })),
+      startedAt: new Date(),
+      status: "active",
+    };
+
+    // Debug log
+    console.log("Question structure:", attempt.questions[0]);
+
+    user.simuladoAttempts.push(attempt);
+    await user.save();
+
+    const attemptId = user.simuladoAttempts[user.simuladoAttempts.length - 1]._id;
+
+    user.currentSimulado = {
+      attemptId,
+      questionIndex: 0,
+      startedAt: new Date(),
+    };
+
+    await user.save();
+
+    const clientQuestions = questions.map(({ correctAlternative, ...q }) => q);
+
+    return res.json({
+      simuladoId: attemptId,
+      vidas: user.vidas,
+      simuladoNumber: attempt.simuladoNumber,
+      questions: clientQuestions,
+    });
+  } catch (error) {
+    console.error("Start simulado error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.submitAnswer = async (req, res) => {
+  try {
+    const { userAnswer, responseTime } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user.currentSimulado) {
+      return res.status(404).json({ error: "Nenhum simulado ativo" });
     }
 
-    const correctAnswer = question.alternatives.find((alt) => alt.isCorrect).letter;
-    const isCorrect = userAnswer === correctAnswer;
+    // Debug log
+    console.log("Current simulado:", {
+      currentSimulado: user.currentSimulado,
+      attemptsCount: user.simuladoAttempts.length,
+    });
+
+    // Get current attempt
+    let currentAttempt = user.simuladoAttempts[user.simuladoAttempts.length - 1];
+
+    if (!currentAttempt) {
+      return res.status(404).json({ error: "Simulado não encontrado" });
+    }
+
+    // Get current question
+    const currentQuestion = currentAttempt.questions[user.currentSimulado.questionIndex];
+
+    if (!currentQuestion) {
+      return res.status(404).json({ error: "Questão não encontrada" });
+    }
+
+    const isCorrect = userAnswer === currentQuestion.correctAlternative;
+
+    currentQuestion.userAnswer = userAnswer;
+    currentQuestion.isCorrect = isCorrect;
+    currentQuestion.responseTime = responseTime * 1000;
+    currentQuestion.answeredAt = new Date();
 
     if (!isCorrect) {
       user.vidas -= 1;
-      user.points = Math.max(0, user.points - 1);
 
-      if (user.vidas === 0) {
-        user.proximaVida = moment().add(3, "hours").toDate();
+      if (user.vidas <= 0) {
+        const proximaVida = new Date();
+        proximaVida.setHours(proximaVida.getHours() + 3);
+        user.proximaVida = proximaVida;
+
+        user.simuladoAttempts = user.simuladoAttempts.filter(
+          (attempt) => attempt._id.toString() !== currentAttempt._id.toString()
+        );
+        user.currentSimulado = null;
+        await user.save();
+
+        return res.status(400).json({
+          error: "Você perdeu todas as vidas! Tente novamente mais tarde.",
+          vidasRestantes: 0,
+          proximaVida: proximaVida,
+        });
       }
+    }
+
+    const isComplete = user.currentSimulado.questionIndex === QUESTIONS_PER_SIMULADO - 1;
+
+    if (isComplete) {
+      currentAttempt.completedAt = new Date();
+      currentAttempt.status = "completed";
+      currentAttempt.score = currentAttempt.questions.filter((q) => q.isCorrect).length;
+      user.currentSimulado = null;
     } else {
-      user.points += 1;
+      user.currentSimulado.questionIndex += 1;
     }
 
-    let simulado = user.simulados.find(
-      (s) => s.year === year && s.discipline === discipline && s.simuladoNumber === simuladoNumber
-    );
-    if (!simulado) {
-      simulado = { year, discipline, simuladoNumber, questions: [] };
-      user.simulados.push(simulado);
-    }
-
-    simulado.questions.push({
-      questionId: question.index,
-      title: question.title,
-      context: question.context,
-      files: question.files,
-      alternativesIntroduction: question.alternativesIntroduction,
-      alternatives: question.alternatives.map((alt) => ({
-        letter: alt.letter,
-        text: alt.text,
-        file: alt.file,
-        isCorrect: alt.isCorrect,
-      })),
-      userAnswer: userAnswer,
-      correctAnswer: correctAnswer,
-      responseTime: responseTime,
-    });
-
-    user.offsets[discipline] += 1;
     await user.save();
 
-    res.status(200).json({
+    return res.json({
       correct: isCorrect,
-      correctAnswer: correctAnswer,
       vidasRestantes: user.vidas,
-      points: user.points,
-      proximaVida: user.proximaVida,
+      isComplete,
+      currentQuestionIndex: isComplete ? null : user.currentSimulado.questionIndex,
+      answer: {
+        userAnswer,
+        correctAnswer: currentQuestion.correctAlternative,
+        explanation: isCorrect
+          ? "Resposta correta!"
+          : `A alternativa correta é ${currentQuestion.correctAlternative}`,
+      },
     });
   } catch (error) {
-    if (error.response && error.response.status === 404) {
-      return res.status(404).json({ message: "Questão não encontrada." });
-    }
-    console.error(`Erro ao buscar questão: ${error.message}`);
-    res.status(500).json({ message: "Erro ao buscar questão.", error: error.message });
-  }
-};
-
-exports.getUserSimuladoHistory = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado." });
-    }
-
-    const simuladosTerminados = user.simulados.filter(
-      (simulado) => simulado.questions.length === 10
-    ).length;
-
-    const simulados = user.simulados.slice(0, 10);
-
-    res.status(200).json({ simulados, simuladosTerminados });
-  } catch (error) {
-    console.error(`Erro ao buscar histórico: ${error.message}`);
-    res.status(500).json({ message: "Erro ao buscar histórico.", error: error.message });
-  }
-};
-
-exports.checkVidas = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado." });
-    }
-
-    await recarregarVidas(user);
-
-    res.status(200).json({
-      vidas: user.vidas,
-      proximaVida: user.proximaVida,
-    });
-  } catch (error) {
-    console.error(`Erro ao verificar vidas: ${error.message}`);
-    res.status(500).json({ message: "Erro ao verificar vidas.", error: error.message });
+    console.error("Submit answer error:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
 exports.getSimuladoStatus = async (req, res) => {
   try {
-    const userId = req.user.id;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado." });
+    const user = await User.findById(req.user.id);
+    if (!user.currentSimulado) {
+      return res.json({ active: false });
     }
 
-    await recarregarVidas(user);
-
-    const simuladosTerminados = user.simulados.filter(
-      (simulado) => simulado.questions.length === 10
-    ).length;
-
-    const simulados = user.simulados.slice(0, 10);
-
-    const response = await axios.get("https://api.enem.dev/v1/exams");
-    const anosDisponiveis = response.data.map((exam) => exam.year);
-
-    res.status(200).json({
-      anosDisponiveis,
-      simulados,
-      simuladosTerminados,
-      vidasRestantes: user.vidas,
-      proximaVida: user.proximaVida,
+    return res.json({
+      active: true,
+      simuladoNumber: user.currentSimulado.simuladoNumber,
+      currentQuestion: user.currentSimulado.questionIndex + 1,
+      vidas: user.vidas,
+      discipline: user.currentSimulado.discipline,
     });
   } catch (error) {
-    console.error(`Erro ao buscar status do simulado: ${error.message}`);
-    res.status(500).json({ message: "Erro ao buscar status do simulado.", error: error.message });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getSimuladoDetails = async (req, res) => {
+  try {
+    const { discipline, simuladoNumber } = req.params;
+    const user = await User.findById(req.user.id);
+
+    const simulado = user.simuladoAttempts.find(
+      (s) => s.discipline === discipline && s.simuladoNumber === parseInt(simuladoNumber)
+    );
+
+    if (!simulado) {
+      return res.status(404).json({ error: "Simulado não encontrado" });
+    }
+
+    return res.json(simulado);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const processAnswer = async (user, questionId, userAnswer, responseTime) => {
+  try {
+    const currentQuestion = user.currentSimulado.questions[user.currentSimulado.questionIndex];
+    const question = await fetchQuestion(currentQuestion.year, currentQuestion.index);
+
+    const isCorrect =
+      question.alternatives.find((alt) => alt.letter === userAnswer)?.isCorrect || false;
+
+    currentQuestion.userAnswer = userAnswer;
+    currentQuestion.responseTime = responseTime;
+    currentQuestion.isCorrect = isCorrect;
+    currentQuestion.answeredAt = new Date();
+
+    if (!isCorrect) {
+      user.vidas--;
+      user.points = Math.max(0, user.points - 1);
+
+      if (user.vidas === 0) {
+        user.currentSimulado.status = "failed";
+        user.proximaVida = moment().add(3, "hours").toDate();
+
+        return {
+          status: "failed",
+          correct: false,
+          vidasRestantes: 0,
+          proximaVida: user.proximaVida,
+          message: "Simulado finalizado - Sem vidas restantes",
+        };
+      }
+    } else {
+      user.points++;
+    }
+
+    user.currentSimulado.questionIndex++;
+    const isComplete = user.currentSimulado.questionIndex >= QUESTIONS_PER_SIMULADO;
+
+    if (isComplete) {
+      user.currentSimulado.status = "completed";
+      user.currentSimulado.completedAt = new Date();
+
+      const completedSimulado = {
+        ...user.currentSimulado,
+        score: user.currentSimulado.questions.filter((q) => q.isCorrect).length,
+      };
+
+      user.simuladoAttempts.push(completedSimulado);
+      user.currentSimulado = null;
+    }
+
+    return {
+      status: isComplete ? "completed" : "in_progress",
+      correct: isCorrect,
+      vidasRestantes: user.vidas,
+      points: user.points,
+      nextQuestion: isComplete
+        ? null
+        : user.currentSimulado?.questions[user.currentSimulado.questionIndex],
+    };
+  } catch (error) {
+    throw new Error(`Error processing answer: ${error.message}`);
+  }
+};
+
+const fetchQuestion = async (year, index) => {
+  try {
+    const response = await axios.get(`https://api.enem.dev/v1/exams/${year}/questions/${index}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(`Failed to fetch question: ${error.message}`);
   }
 };
