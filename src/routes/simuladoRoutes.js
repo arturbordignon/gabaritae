@@ -10,7 +10,7 @@ const authMiddleware = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
-router.get("/topics", listTopics);
+router.get("/topics", authMiddleware, listTopics);
 router.post("/simulado", authMiddleware, getSimulado);
 router.get("/history", authMiddleware, getUserSimuladoHistory);
 router.get("/check-vidas", authMiddleware, checkVidas);

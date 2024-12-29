@@ -370,6 +370,7 @@
       "get": {
         "summary": "Listar tópicos do ENEM",
         "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {
             "description": "Tópicos listados com sucesso",
@@ -381,12 +382,28 @@
                     "topics": {
                       "type": "array",
                       "items": { "type": "string" }
-                    }
+                    },
+                    "simuladosRealizados": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "discipline": { "type": "string" },
+                            "simuladoNumber": { "type": "integer" },
+                            "status": { "type": "string", "enum": ["completo", "incompleto"] }
+                          }
+                        }
+                      }
+                    },
+                    "vidasRestantes": { "type": "integer" }
                   }
                 }
               }
             }
           },
+          "404": { "description": "Nenhum tópico encontrado" },
           "500": { "description": "Erro interno do servidor" }
         }
       }
@@ -617,7 +634,8 @@
                           }
                         }
                       }
-                    }
+                    },
+                    "simuladosTerminados": { "type": "integer" }
                   }
                 }
               }
