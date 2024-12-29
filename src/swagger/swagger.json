@@ -414,6 +414,7 @@
                             "type": "array",
                             "items": { "type": "string" }
                           },
+                          "alternativesIntroduction": { "type": "string" },
                           "alternatives": {
                             "type": "array",
                             "items": {
@@ -432,33 +433,6 @@
                       }
                     }
                   }
-                },
-                "example": {
-                  "simuladoId": "507f1f77bcf86cd799439011",
-                  "vidas": 10,
-                  "simuladoNumber": 1,
-                  "questions": [
-                    {
-                      "questionId": "150",
-                      "index": 150,
-                      "year": 2023,
-                      "title": "Questão 150 - ENEM 2023",
-                      "context": "Dirigir após ingerir bebidas alcoólicas...",
-                      "files": [],
-                      "alternatives": [
-                        {
-                          "letter": "A",
-                          "text": "C = 0,9q",
-                          "file": null
-                        },
-                        {
-                          "letter": "B",
-                          "text": "C = 0,1q",
-                          "file": null
-                        }
-                      ]
-                    }
-                  ]
                 }
               }
             }

@@ -45,6 +45,7 @@ const fetchQuestions = async (year, discipline) => {
       title: question.title,
       context: question.context,
       files: question.files || [],
+      alternativesIntroduction: question.alternativesIntroduction,
       alternatives: question.alternatives.map((alt) => ({
         letter: alt.letter,
         text: alt.text,
@@ -88,9 +89,11 @@ exports.startSimulado = async (req, res) => {
         questionId: q.questionId,
         index: q.index,
         year: q.year,
-        title: q.title || `Questão ${q.index} - ENEM ${q.year}`, // Ensure title exists
-        context: q.context || "", // Ensure context exists
+        title: q.title || `Questão ${q.index} - ENEM ${q.year}`,
+        context: q.context || "",
         files: q.files || [],
+        alternativesIntroduction:
+          q.alternativesIntroduction || "Com base no texto, selecione a alternativa correta",
         alternatives: q.alternatives.map((alt) => ({
           letter: alt.letter,
           text: alt.text,
