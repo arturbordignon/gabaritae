@@ -8,7 +8,9 @@ const recarregarVidas = async (user) => {
   if (user.proximaVida && now.isSameOrAfter(user.proximaVida)) {
     const proximaVidaMoment = moment(user.proximaVida);
     console.log(`Proxima vida: ${proximaVidaMoment.toISOString()}`);
-    const vidasRecuperadas = Math.floor(now.diff(proximaVidaMoment, "hours") / 3);
+    const horasDecorridas = now.diff(proximaVidaMoment, "hours");
+    const vidasRecuperadas = Math.floor(horasDecorridas / 3);
+    console.log(`Horas decorridas: ${horasDecorridas}`);
     console.log(`Vidas recuperadas: ${vidasRecuperadas}`);
     user.vidas = Math.min(10, user.vidas + vidasRecuperadas);
     user.proximaVida = user.vidas < 10 ? now.add(3, "hours").toDate() : null;
@@ -80,9 +82,12 @@ exports.getSimulado = async (req, res) => {
           id: question.index,
           title: question.title,
           context: question.context,
+          files: question.files,
+          alternativesIntroduction: question.alternativesIntroduction,
           alternatives: question.alternatives.map((alt) => ({
             letter: alt.letter,
             text: alt.text,
+            file: alt.file,
           })),
         },
         questionNumber: questionOffset,
@@ -115,9 +120,12 @@ exports.getSimulado = async (req, res) => {
       questionId: question.index,
       title: question.title,
       context: question.context,
+      files: question.files,
+      alternativesIntroduction: question.alternativesIntroduction,
       alternatives: question.alternatives.map((alt) => ({
         letter: alt.letter,
         text: alt.text,
+        file: alt.file,
         isCorrect: alt.isCorrect,
       })),
       userAnswer: userAnswer,

@@ -431,13 +431,19 @@
                         "id": { "type": "string" },
                         "title": { "type": "string" },
                         "context": { "type": "string" },
+                        "files": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "alternativesIntroduction": { "type": "string" },
                         "alternatives": {
                           "type": "array",
                           "items": {
                             "type": "object",
                             "properties": {
                               "letter": { "type": "string" },
-                              "text": { "type": "string" }
+                              "text": { "type": "string" },
+                              "file": { "type": "string" }
                             }
                           }
                         }
@@ -461,6 +467,35 @@
           "400": { "description": "Sem vidas disponíveis" },
           "404": { "description": "Usuário não encontrado" },
           "500": { "description": "Erro interno do servidor" }
+        }
+      }
+    },
+    "/simulado/check-vidas": {
+      "get": {
+        "summary": "Verificar vidas do usuário",
+        "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Vidas verificadas com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "vidas": { "type": "integer" },
+                    "proximaVida": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Usuário não encontrado" },
+          "500": { "description": "Erro ao verificar vidas" }
         }
       }
     },
@@ -519,35 +554,6 @@
             }
           },
           "500": { "description": "Erro ao buscar histórico" }
-        }
-      }
-    },
-    "/simulado/check-vidas": {
-      "get": {
-        "summary": "Verificar vidas do usuário",
-        "tags": ["Simulado"],
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "Vidas verificadas com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "vidas": { "type": "integer" },
-                    "proximaVida": {
-                      "type": "string",
-                      "format": "date-time",
-                      "nullable": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": { "description": "Usuário não encontrado" },
-          "500": { "description": "Erro ao verificar vidas" }
         }
       }
     },

@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const alternativeSchema = new mongoose.Schema({
   letter: { type: String, required: true },
   text: { type: String, required: true },
+  file: { type: String },
   isCorrect: { type: Boolean, required: true },
 });
 
@@ -11,6 +12,8 @@ const questionSchema = new mongoose.Schema({
   questionId: { type: Number, required: true },
   title: { type: String, required: true },
   context: { type: String, required: true },
+  files: [{ type: String }],
+  alternativesIntroduction: { type: String },
   alternatives: [alternativeSchema],
   userAnswer: { type: String, required: true },
   correctAnswer: { type: String, required: true },
