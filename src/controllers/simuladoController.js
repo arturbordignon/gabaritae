@@ -63,10 +63,9 @@ exports.startSimulado = async (req, res) => {
     const user = await User.findById(req.user.id);
 
     if (user.vidas < 1) {
-      return res.status(403).json({
-        error: "Sem vidas disponíveis",
-        proximaVida: user.proximaVida,
-      });
+      return res
+        .status(403)
+        .json({ message: "Sem vidas disponíveis", proximaVida: user.proximaVida });
     }
 
     const completedCount = user.simuladoAttempts[discipline].filter(
@@ -74,7 +73,7 @@ exports.startSimulado = async (req, res) => {
     ).length;
 
     if (completedCount >= MAX_SIMULADOS_PER_DISCIPLINE) {
-      return res.status(400).json({ error: "Limite de simulados atingido" });
+      return res.status(400).json({ message: "Limite de simulados atingido" });
     }
 
     const questions = await fetchQuestions(year, discipline);
@@ -141,7 +140,7 @@ exports.submitAnswer = async (req, res) => {
     const user = await User.findById(req.user.id);
 
     if (!user.currentSimulado) {
-      return res.status(404).json({ error: "Nenhum simulado ativo" });
+      return res.status(404).json({ message: "Nenhum simulado ativo" });
     }
 
     const { discipline } = user.currentSimulado;
@@ -150,7 +149,7 @@ exports.submitAnswer = async (req, res) => {
     );
 
     if (!currentAttempt) {
-      return res.status(404).json({ error: "Simulado não encontrado" });
+      return res.status(404).json({ message: "Simulado não encontrado" });
     }
 
     // Debug logging
@@ -169,11 +168,11 @@ exports.submitAnswer = async (req, res) => {
     // Validate question sequence
     const questionIndex = currentAttempt.questions.findIndex((q) => q.questionId === questionId);
     if (questionIndex === -1) {
-      return res.status(404).json({ error: "Questão não encontrada" });
+      return res.status(404).json({ message: "Questão não encontrada" });
     }
     if (questionIndex !== user.currentSimulado.questionIndex) {
       return res.status(400).json({
-        error: "Questão fora de ordem",
+        message: "Questão fora de ordem",
         expectedQuestionId: currentAttempt.questions[user.currentSimulado.questionIndex].questionId,
         currentQuestionIndex: user.currentSimulado.questionIndex,
       });
@@ -182,7 +181,7 @@ exports.submitAnswer = async (req, res) => {
     // Validate question index
     if (user.currentSimulado.questionIndex >= currentAttempt.questions.length) {
       return res.status(400).json({
-        error: "Índice de questão inválido",
+        message: "Índice de questão inválido",
         currentIndex: user.currentSimulado.questionIndex,
         totalQuestions: currentAttempt.questions.length,
       });
@@ -193,7 +192,7 @@ exports.submitAnswer = async (req, res) => {
 
     if (!currentQuestion) {
       return res.status(404).json({
-        error: "Questão não encontrada",
+        message: "Questão não encontrada",
         questionId,
         index: user.currentSimulado.questionIndex,
       });
@@ -202,7 +201,7 @@ exports.submitAnswer = async (req, res) => {
     // Validate if already answered
     if (currentQuestion.userAnswer) {
       return res.status(400).json({
-        error: "Esta questão já foi respondida",
+        message: "Esta questão já foi respondida",
         currentQuestionIndex: user.currentSimulado.questionIndex,
       });
     }
@@ -230,7 +229,7 @@ exports.submitAnswer = async (req, res) => {
         await user.save();
 
         return res.status(400).json({
-          error: "Você perdeu todas as vidas! Tente novamente mais tarde.",
+          message: "Você perdeu todas as vidas! Tente novamente mais tarde.",
           vidasRestantes: 0,
           proximaVida: proximaVida,
         });
@@ -314,7 +313,7 @@ exports.getSimuladoDetails = async (req, res) => {
     );
 
     if (!simulado) {
-      return res.status(404).json({ error: "Simulado não encontrado" });
+      return res.status(404).json({ message: "Simulado não encontrado" });
     }
 
     return res.json(simulado);
