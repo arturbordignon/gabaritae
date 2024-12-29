@@ -29,29 +29,25 @@ const fetchQuestions = async (year, discipline) => {
       throw new Error("Invalid response format from API");
     }
 
-    // Debug log to verify API response
-    console.log(
-      "API Response Questions:",
-      response.data.questions.map((q) => ({
-        questionId: q.index,
-        correctAlternative: q.correctAlternative,
-      }))
-    );
+    console.log("Raw API Response:", JSON.stringify(response.data.questions[2], null, 2));
 
     return response.data.questions.map((question, index) => ({
       questionId: question.index.toString(),
       index: question.index,
       year: question.year,
-      title: question.title,
-      context: question.context,
+      title: question.title || `Questão ${question.index} - ENEM ${question.year}`,
+      context: question.context || "",
       files: question.files || [],
-      alternativesIntroduction: question.alternativesIntroduction,
-      alternatives: question.alternatives.map((alt) => ({
-        letter: alt.letter,
-        text: alt.text,
-        file: alt.file || null,
-      })),
-      correctAlternative: question.correctAlternative, // Ensure this is fetched
+      alternativesIntroduction:
+        question.alternativesIntroduction || "Com base no texto, selecione a alternativa correta",
+      alternatives: question.alternatives
+        .map((alt) => ({
+          letter: alt.letter,
+          text: alt.text || "Alternativa sem texto",
+          file: alt.file || null,
+        }))
+        .filter((alt) => alt.letter),
+      correctAlternative: question.correctAlternative,
     }));
   } catch (error) {
     console.error("API Request failed:", error.response?.data || error.message);
@@ -137,28 +133,36 @@ exports.startSimulado = async (req, res) => {
 
 exports.submitAnswer = async (req, res) => {
   try {
-    const { userAnswer, responseTime } = req.body;
+    const { questionId, userAnswer, responseTime } = req.body;
     const user = await User.findById(req.user.id);
 
     if (!user.currentSimulado) {
       return res.status(404).json({ error: "Nenhum simulado ativo" });
     }
 
-    // Debug log
-    console.log("Current simulado:", {
-      currentSimulado: user.currentSimulado,
-      attemptsCount: user.simuladoAttempts.length,
-    });
-
-    // Get current attempt
-    let currentAttempt = user.simuladoAttempts[user.simuladoAttempts.length - 1];
-
-    if (!currentAttempt) {
-      return res.status(404).json({ error: "Simulado não encontrado" });
+    if (responseTime > MAX_ANSWER_TIME_SECONDS) {
+      return res.status(400).json({
+        error: `Tempo máximo excedido. O limite é de ${MAX_ANSWER_TIME_SECONDS} segundos (5 minutos)`,
+      });
     }
 
-    // Get current question
+    let currentAttempt = user.simuladoAttempts[user.simuladoAttempts.length - 1];
     const currentQuestion = currentAttempt.questions[user.currentSimulado.questionIndex];
+
+    // Validate if correct question is being answered
+    if (currentQuestion.questionId !== questionId) {
+      return res.status(400).json({
+        error: "Questão inválida ou fora de ordem",
+        expectedQuestionId: currentQuestion.questionId,
+      });
+    }
+
+    if (currentQuestion.userAnswer) {
+      return res.status(400).json({
+        error: "Esta questão já foi respondida",
+        currentQuestionIndex: user.currentSimulado.questionIndex,
+      });
+    }
 
     if (!currentQuestion) {
       return res.status(404).json({ error: "Questão não encontrada" });

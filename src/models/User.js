@@ -3,8 +3,8 @@ const bcrypt = require("bcrypt");
 
 const alternativeSchema = new mongoose.Schema({
   letter: { type: String, required: true },
-  text: { type: String, required: true },
-  file: { type: String },
+  text: { type: String, default: "Alternativa sem texto" },
+  file: String,
 });
 
 const questionSchema = new mongoose.Schema({
@@ -14,13 +14,7 @@ const questionSchema = new mongoose.Schema({
   title: { type: String, default: "" },
   context: { type: String, default: "" },
   files: [String],
-  alternatives: [
-    {
-      letter: { type: String, required: true },
-      text: { type: String, required: true },
-      file: String,
-    },
-  ],
+  alternatives: [alternativeSchema],
   correctAlternative: { type: String, default: "" },
   userAnswer: String,
   isCorrect: Boolean,
