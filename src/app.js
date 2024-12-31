@@ -13,6 +13,7 @@ const homeRoutes = require("./routes/homeRoutes");
 
 const requestLogger = require("./middlewares/requestLogger");
 const errorHandler = require("./middlewares/errorHandler");
+const { startLifeRenewalJob } = require("./utils/lifeRenew");
 
 const app = express();
 app.use(requestLogger);
@@ -21,6 +22,8 @@ connectDB();
 app.use(express.json());
 app.use(cors());
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+startLifeRenewalJob();
 
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
