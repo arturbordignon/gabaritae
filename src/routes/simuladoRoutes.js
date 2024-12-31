@@ -3,6 +3,7 @@ const simuladoController = require("../controllers/simuladoController");
 const authMiddleware = require("../middlewares/authMiddleware");
 const router = express.Router();
 
+router.get("/provas", authMiddleware, simuladoController.getExams);
 router.post("/start", authMiddleware, simuladoController.startSimulado);
 router.post("/answer", authMiddleware, simuladoController.submitAnswer);
 router.get("/status", authMiddleware, simuladoController.getSimuladoStatus);

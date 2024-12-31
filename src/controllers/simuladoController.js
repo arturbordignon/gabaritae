@@ -321,3 +321,29 @@ exports.getSimuladoDetails = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.getExams = async (req, res) => {
+  try {
+    const response = await axios.get("https://api.enem.dev/v1/exams");
+
+    const exams = response.data || [];
+
+    if (!exams.length) {
+      return res.status(404).json({ message: "Nenhuma prova encontrado" });
+    }
+
+    return res.json(exams);
+  } catch (error) {
+    console.error("Erro ao gerar provas:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+
+    if (error.response?.status === 404) {
+      return res.status(404).json({ message: "Endpoint não encontrado" });
+    }
+
+    res.status(500).json({ message: "Erro ao buscar provas" });
+  }
+};
