@@ -582,6 +582,9 @@
                   "properties": {
                     "correct": { "type": "boolean" },
                     "vidasRestantes": { "type": "integer" },
+                    "pointsEarned": { "type": "integer" },
+                    "currentPoints": { "type": "integer" },
+                    "level": { "type": "integer" },
                     "isComplete": { "type": "boolean" },
                     "currentQuestionIndex": {
                       "type": "integer",
@@ -598,54 +601,18 @@
                   }
                 },
                 "example": {
-                  "correct": false,
+                  "correct": true,
                   "vidasRestantes": 9,
+                  "pointsEarned": 10,
+                  "currentPoints": 120,
+                  "level": 2,
                   "isComplete": false,
                   "currentQuestionIndex": 1,
                   "answer": {
                     "userAnswer": "A",
-                    "correctAnswer": "B",
-                    "explanation": "A alternativa correta é B"
+                    "correctAnswer": "A",
+                    "explanation": "Resposta correta!"
                   }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Error response when out of lives",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": { "type": "string" },
-                    "vidasRestantes": { "type": "integer" },
-                    "proximaVida": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  }
-                },
-                "example": {
-                  "error": "Você perdeu todas as vidas! Tente novamente mais tarde.",
-                  "vidasRestantes": 0,
-                  "proximaVida": "2024-12-29T23:08:27.591Z"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No active simulado found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": { "type": "string" }
-                  }
-                },
-                "example": {
-                  "error": "Nenhum simulado ativo"
                 }
               }
             }
@@ -813,6 +780,247 @@
         }
       }
     },
+
+    "/simulado/historico": {
+      "post": {
+        "summary": "Obter histórico de simulados por disciplina",
+        "tags": ["Histórico"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "discipline": {
+                    "type": "string",
+                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"],
+                    "description": "Disciplina do simulado"
+                  }
+                },
+                "required": ["discipline"]
+              },
+              "example": {
+                "discipline": "matematica"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Histórico de simulados retornado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "string" },
+                      "simuladoNumber": { "type": "integer" },
+                      "year": { "type": "integer" },
+                      "startedAt": { "type": "string", "format": "date-time" },
+                      "completedAt": { "type": "string", "format": "date-time" },
+                      "status": { "type": "string" },
+                      "score": { "type": "integer" },
+                      "totalQuestions": { "type": "integer" },
+                      "correctAnswers": { "type": "integer" }
+                    }
+                  }
+                },
+                "example": [
+                  {
+                    "id": "6771a99cd5691ccfd33f44ea",
+                    "simuladoNumber": 1,
+                    "year": 2019,
+                    "startedAt": "2024-12-29T19:57:16.347Z",
+                    "completedAt": "2024-12-29T19:58:19.032Z",
+                    "status": "completed",
+                    "score": 2,
+                    "totalQuestions": 10,
+                    "correctAnswers": 2
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Disciplina inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "message": "Disciplina inválida"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nenhum simulado encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "message": "Nenhum simulado encontrado para esta disciplina"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulado/historico/detalhes": {
+      "post": {
+        "summary": "Obter detalhes completos de um simulado específico",
+        "tags": ["Histórico"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "discipline": {
+                    "type": "string",
+                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
+                  },
+                  "simuladoNumber": {
+                    "type": "integer"
+                  }
+                },
+                "required": ["discipline", "simuladoNumber"]
+              },
+              "example": {
+                "discipline": "matematica",
+                "simuladoNumber": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Detalhes do simulado retornados com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "discipline": { "type": "string" },
+                    "simuladoNumber": { "type": "integer" },
+                    "year": { "type": "integer" },
+                    "startedAt": { "type": "string", "format": "date-time" },
+                    "completedAt": { "type": "string", "format": "date-time" },
+                    "status": { "type": "string" },
+                    "score": { "type": "integer" },
+                    "totalQuestions": { "type": "integer" },
+                    "correctAnswers": { "type": "integer" },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": { "type": "string" },
+                          "index": { "type": "integer" },
+                          "title": { "type": "string" },
+                          "context": { "type": "string" },
+                          "alternatives": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "letter": { "type": "string" },
+                                "text": { "type": "string" },
+                                "file": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "_id": { "type": "string" }
+                              }
+                            }
+                          },
+                          "userAnswer": { "type": "string" },
+                          "correctAlternative": { "type": "string" },
+                          "isCorrect": { "type": "boolean" },
+                          "answeredAt": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "id": "6771a99cd5691ccfd33f44ea",
+                  "discipline": "matematica",
+                  "simuladoNumber": 1,
+                  "year": 2019,
+                  "startedAt": "2024-12-29T19:57:16.347Z",
+                  "completedAt": "2024-12-29T19:58:19.032Z",
+                  "status": "completed",
+                  "score": 2,
+                  "totalQuestions": 10,
+                  "correctAnswers": 2,
+                  "questions": [
+                    {
+                      "questionId": "150",
+                      "index": 150,
+                      "title": "Questão 150 - ENEM 2019",
+                      "context": "Uma pessoa se interessou em adquirir um produto...",
+                      "alternatives": [
+                        {
+                          "letter": "A",
+                          "text": "398,02",
+                          "file": null,
+                          "_id": "6771a99cd5691ccfd33f44ec"
+                        }
+                      ],
+                      "userAnswer": "A",
+                      "correctAlternative": "B",
+                      "isCorrect": false,
+                      "answeredAt": "2024-12-29T19:57:54.457Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disciplina inválida"
+          },
+          "404": {
+            "description": "Simulado não encontrado"
+          },
+          "500": {
+            "description": "Erro interno do servidor"
+          }
+        }
+      }
+    },
+
     "/gamification/": {
       "get": {
         "summary": "Obter nível e pontos do usuário",

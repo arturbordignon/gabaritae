@@ -212,8 +212,15 @@ exports.submitAnswer = async (req, res) => {
     currentQuestion.isCorrect = isCorrect;
     currentQuestion.answeredAt = new Date();
 
-    // Handle incorrect answer
-    if (!isCorrect) {
+    if (isCorrect) {
+      user.points = (user.points || 0) + 1;
+
+      const newLevel = Math.floor(user.points / 100) + 1;
+      if (newLevel > user.level) {
+        user.level = newLevel;
+      }
+    } else {
+      user.points = Math.max(0, (user.points || 0) - 1);
       user.vidas -= 1;
 
       if (user.vidas <= 0) {
@@ -221,8 +228,7 @@ exports.submitAnswer = async (req, res) => {
         proximaVida.setHours(proximaVida.getHours() + 3);
         user.proximaVida = proximaVida;
 
-        // Remove current simulado
-        user.simuladoAttempts[discipline] = user.simuladoAttempts[discipline].filter(
+        user.simuladoAttempts = user.simuladoAttempts.filter(
           (attempt) => attempt._id.toString() !== currentAttempt._id.toString()
         );
         user.currentSimulado = null;
@@ -236,48 +242,37 @@ exports.submitAnswer = async (req, res) => {
       }
     }
 
-    // Check if simulado is complete
     const isComplete = user.currentSimulado.questionIndex === currentAttempt.questions.length - 1;
 
     if (isComplete) {
       currentAttempt.completedAt = new Date();
       currentAttempt.status = "completed";
       currentAttempt.score = currentAttempt.questions.filter((q) => q.isCorrect).length;
-      user.currentSimulado = null;
-      await user.save();
 
-      return res.json({
-        correct: isCorrect,
-        vidasRestantes: user.vidas,
-        isComplete: true,
-        currentQuestionIndex: null,
-        answer: {
-          userAnswer,
-          correctAnswer: currentQuestion.correctAlternative,
-          explanation: isCorrect
-            ? "Resposta correta!"
-            : `A alternativa correta é ${currentQuestion.correctAlternative}`,
-        },
-        message: "Você terminou este simulado!",
-      });
+      user.points += 0;
+      user.currentSimulado = null;
     } else {
       user.currentSimulado.questionIndex += 1;
-      await user.save();
-
-      return res.json({
-        correct: isCorrect,
-        vidasRestantes: user.vidas,
-        isComplete: false,
-        currentQuestionIndex: user.currentSimulado.questionIndex,
-        answer: {
-          userAnswer,
-          correctAnswer: currentQuestion.correctAlternative,
-          explanation: isCorrect
-            ? "Resposta correta!"
-            : `A alternativa correta é ${currentQuestion.correctAlternative}`,
-        },
-      });
     }
+
+    await user.save();
+
+    return res.json({
+      correct: isCorrect,
+      vidasRestantes: user.vidas,
+      pointsEarned: isCorrect ? 10 : -5,
+      currentPoints: user.points,
+      level: user.level,
+      isComplete,
+      currentQuestionIndex: isComplete ? null : user.currentSimulado.questionIndex,
+      answer: {
+        userAnswer,
+        correctAnswer: currentQuestion.correctAlternative,
+        explanation: isCorrect
+          ? "Resposta correta!"
+          : `A alternativa correta é ${currentQuestion.correctAlternative}`,
+      },
+    });
   } catch (error) {
     console.error("Submit answer error:", error);
     res.status(500).json({ message: error.message });
@@ -345,5 +340,97 @@ exports.getExams = async (req, res) => {
     }
 
     res.status(500).json({ message: "Erro ao buscar provas" });
+  }
+};
+
+exports.getSimuladosByDiscipline = async (req, res) => {
+  try {
+    const { discipline } = req.body;
+    const user = await User.findById(req.user.id);
+
+    const validDisciplines = ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"];
+    if (!validDisciplines.includes(discipline)) {
+      return res.status(400).json({
+        message: "Disciplina inválida",
+      });
+    }
+
+    const disciplineSimulados = user.simuladoAttempts[discipline] || [];
+
+    if (!disciplineSimulados.length) {
+      return res.status(404).json({
+        message: "Nenhum simulado encontrado para esta disciplina",
+      });
+    }
+
+    const simulados = disciplineSimulados.map((simulado) => ({
+      id: simulado._id,
+      simuladoNumber: simulado.simuladoNumber,
+      year: simulado.year,
+      startedAt: simulado.startedAt,
+      completedAt: simulado.completedAt,
+      status: simulado.status,
+      score: simulado.score,
+      totalQuestions: simulado.questions?.length || 0,
+      correctAnswers: simulado.questions?.filter((q) => q.isCorrect)?.length || 0,
+    }));
+
+    return res.json(simulados);
+  } catch (error) {
+    console.error("Get simulados by discipline error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getSimuladoDetailsById = async (req, res) => {
+  try {
+    const { discipline, simuladoNumber } = req.body;
+    const user = await User.findById(req.user.id);
+
+    const validDisciplines = ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"];
+    if (!validDisciplines.includes(discipline)) {
+      return res.status(400).json({
+        message: "Disciplina inválida",
+      });
+    }
+
+    const simulado = user.simuladoAttempts[discipline].find(
+      (s) => s.simuladoNumber === parseInt(simuladoNumber)
+    );
+
+    if (!simulado) {
+      return res.status(404).json({
+        message: "Simulado não encontrado",
+      });
+    }
+
+    const detailedSimulado = {
+      id: simulado._id,
+      discipline: simulado.discipline,
+      simuladoNumber: simulado.simuladoNumber,
+      year: simulado.year,
+      startedAt: simulado.startedAt,
+      completedAt: simulado.completedAt,
+      status: simulado.status,
+      score: simulado.score,
+      totalQuestions: simulado.questions.length,
+      correctAnswers: simulado.questions.filter((q) => q.isCorrect).length,
+      questions: simulado.questions.map((q) => ({
+        questionId: q.questionId,
+        index: q.index,
+        title: q.title,
+        context: q.context,
+        alternatives: q.alternatives,
+        userAnswer: q.userAnswer,
+        correctAlternative: q.correctAlternative,
+        isCorrect: q.isCorrect,
+        answeredAt: q.answeredAt,
+      })),
+    };
+
+    return res.json(detailedSimulado);
+  } catch (error) {
+    console.error("Erro:", error);
+    res.status(500).json({ message: error.message });
   }
 };
