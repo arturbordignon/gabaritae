@@ -468,8 +468,9 @@
     },
     "/simulado/start": {
       "post": {
-        "summary": "Start a new simulado",
+        "summary": "Iniciar um novo simulado",
         "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -477,8 +478,19 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "year": { "type": "integer" },
-                  "discipline": { "type": "string" }
+                  "year": {
+                    "type": "integer",
+                    "description": "Ano do ENEM"
+                  },
+                  "discipline": {
+                    "type": "string",
+                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
+                  },
+                  "language": {
+                    "type": "string",
+                    "enum": ["ingles", "espanhol"],
+                    "description": "Obrigatório apenas para disciplina 'linguagens'"
+                  }
                 },
                 "required": ["year", "discipline"]
               }
@@ -487,7 +499,7 @@
         },
         "responses": {
           "200": {
-            "description": "Simulado started successfully",
+            "description": "Simulado iniciado com sucesso",
             "content": {
               "application/json": {
                 "schema": {
@@ -495,6 +507,8 @@
                   "properties": {
                     "simuladoId": { "type": "string" },
                     "vidas": { "type": "integer" },
+                    "points": { "type": "integer" },
+                    "level": { "type": "integer" },
                     "simuladoNumber": { "type": "integer" },
                     "questions": {
                       "type": "array",
@@ -503,14 +517,8 @@
                         "properties": {
                           "questionId": { "type": "string" },
                           "index": { "type": "integer" },
-                          "year": { "type": "integer" },
                           "title": { "type": "string" },
                           "context": { "type": "string" },
-                          "files": {
-                            "type": "array",
-                            "items": { "type": "string" }
-                          },
-                          "alternativesIntroduction": { "type": "string" },
                           "alternatives": {
                             "type": "array",
                             "items": {
@@ -527,6 +535,43 @@
                           }
                         }
                       }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro de validação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Você já tem um simulado em andamento",
+                        "Idioma inválido ou não especificado para disciplina de linguagens",
+                        "Limite de simulados atingido"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem vidas disponíveis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "proximaVida": {
+                      "type": "string",
+                      "format": "date-time"
                     }
                   }
                 }
@@ -781,7 +826,71 @@
       }
     },
 
-    "/simulado/historico": {
+    "/simulado/provas": {
+      "get": {
+        "summary": "Obter provas disponíveis do ENEM",
+        "tags": ["Simulado"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Lista de provas retornada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "year": { "type": "integer" },
+                      "title": { "type": "string" },
+                      "disciplines": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "label": { "type": "string" },
+                            "value": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": [
+                  {
+                    "year": 2023,
+                    "title": "ENEM 2023",
+                    "disciplines": [
+                      {
+                        "label": "Matemática",
+                        "value": "matematica"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "404": {
+            "description": "Nenhuma prova encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro ao buscar provas"
+          }
+        }
+      }
+    },
+    "/simulado/historico/disciplina": {
       "post": {
         "summary": "Obter histórico de simulados por disciplina",
         "tags": ["Histórico"],
@@ -795,21 +904,17 @@
                 "properties": {
                   "discipline": {
                     "type": "string",
-                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"],
-                    "description": "Disciplina do simulado"
+                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
                   }
                 },
                 "required": ["discipline"]
-              },
-              "example": {
-                "discipline": "matematica"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Histórico de simulados retornado com sucesso",
+            "description": "Histórico retornado com sucesso",
             "content": {
               "application/json": {
                 "schema": {
@@ -827,64 +932,6 @@
                       "totalQuestions": { "type": "integer" },
                       "correctAnswers": { "type": "integer" }
                     }
-                  }
-                },
-                "example": [
-                  {
-                    "id": "6771a99cd5691ccfd33f44ea",
-                    "simuladoNumber": 1,
-                    "year": 2019,
-                    "startedAt": "2024-12-29T19:57:16.347Z",
-                    "completedAt": "2024-12-29T19:58:19.032Z",
-                    "status": "completed",
-                    "score": 2,
-                    "totalQuestions": 10,
-                    "correctAnswers": 2
-                  }
-                ]
-              }
-            }
-          },
-          "400": {
-            "description": "Disciplina inválida",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": { "type": "string" }
-                  }
-                },
-                "example": {
-                  "message": "Disciplina inválida"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Nenhum simulado encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": { "type": "string" }
-                  }
-                },
-                "example": {
-                  "message": "Nenhum simulado encontrado para esta disciplina"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Erro interno do servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": { "type": "string" }
                   }
                 }
               }

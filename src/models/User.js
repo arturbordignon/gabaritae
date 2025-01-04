@@ -52,9 +52,11 @@ const userSchema = new mongoose.Schema({
   },
   simuladoAttempts: {
     matematica: [simuladoAttemptSchema],
-    linguagens: [simuladoAttemptSchema],
     "ciencias-humanas": [simuladoAttemptSchema],
     "ciencias-natureza": [simuladoAttemptSchema],
+    linguagens: [simuladoAttemptSchema],
+    "linguagens-ingles": [simuladoAttemptSchema],
+    "linguagens-espanhol": [simuladoAttemptSchema],
   },
   currentSimulado: {
     attemptId: mongoose.Schema.Types.ObjectId,

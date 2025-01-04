@@ -59,16 +59,56 @@ const fetchQuestions = async (year, discipline) => {
 
 exports.startSimulado = async (req, res) => {
   try {
-    const { year, discipline } = req.body;
+    const { year, discipline, language } = req.body;
     const user = await User.findById(req.user.id);
 
-    if (user.vidas < 1) {
-      return res
-        .status(403)
-        .json({ message: "Sem vidas disponíveis", proximaVida: user.proximaVida });
+    if (typeof user.points === "undefined") user.points = 0;
+    if (typeof user.level === "undefined") user.level = 1;
+
+    let disciplineKey = discipline;
+    if (discipline === "linguagens") {
+      if (!language || !["ingles", "espanhol"].includes(language)) {
+        return res.status(400).json({
+          message: "Idioma inválido ou não especificado para disciplina de linguagens",
+        });
+      }
+      disciplineKey = `linguagens-${language}`;
     }
 
-    const completedCount = user.simuladoAttempts[discipline].filter(
+    const hasActiveSimulado = Object.values(user.simuladoAttempts || {}).some((attempts) =>
+      attempts?.some((s) => s.status === "active")
+    );
+
+    if (hasActiveSimulado) {
+      return res.status(400).json({
+        message: "Você já tem um simulado em andamento",
+      });
+    }
+
+    if (user.vidas < 1) {
+      if (user.simuladoAttempts[disciplineKey]) {
+        user.simuladoAttempts[disciplineKey] = user.simuladoAttempts[disciplineKey].filter(
+          (s) => s.status === "completed"
+        );
+      }
+
+      const proximaVida = new Date();
+      proximaVida.setHours(proximaVida.getHours() + 3);
+      user.proximaVida = proximaVida;
+
+      await user.save();
+
+      return res.status(403).json({
+        message: "Sem vidas disponíveis",
+        proximaVida: user.proximaVida,
+      });
+    }
+
+    if (!user.simuladoAttempts[disciplineKey]) {
+      user.simuladoAttempts[disciplineKey] = [];
+    }
+
+    const completedCount = user.simuladoAttempts[disciplineKey].filter(
       (s) => s.status === "completed"
     ).length;
 
@@ -79,7 +119,7 @@ exports.startSimulado = async (req, res) => {
     const questions = await fetchQuestions(year, discipline);
 
     const attempt = {
-      discipline,
+      discipline: disciplineKey,
       simuladoNumber: completedCount + 1,
       year,
       questions: questions.map((q) => ({
@@ -96,26 +136,23 @@ exports.startSimulado = async (req, res) => {
           text: alt.text,
           file: alt.file || null,
         })),
-        correctAlternative: q.correctAlternative, // Required field
+        correctAlternative: q.correctAlternative,
       })),
       startedAt: new Date(),
       status: "active",
     };
 
-    // Debug log
-    console.log("Question structure:", attempt.questions[0]);
-
-    user.simuladoAttempts[discipline].push(attempt);
+    user.simuladoAttempts[disciplineKey].push(attempt);
     await user.save();
 
     const attemptId =
-      user.simuladoAttempts[discipline][user.simuladoAttempts[discipline].length - 1]._id;
+      user.simuladoAttempts[disciplineKey][user.simuladoAttempts[disciplineKey].length - 1]._id;
 
     user.currentSimulado = {
       attemptId,
       questionIndex: 0,
       startedAt: new Date(),
-      discipline,
+      discipline: disciplineKey,
     };
 
     await user.save();
@@ -125,11 +162,13 @@ exports.startSimulado = async (req, res) => {
     return res.json({
       simuladoId: attemptId,
       vidas: user.vidas,
+      points: user.points,
+      level: user.level,
       simuladoNumber: attempt.simuladoNumber,
       questions: clientQuestions,
     });
   } catch (error) {
-    console.error("Start simulado error:", error);
+    console.error("Erro ao começar simulado:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -206,7 +245,6 @@ exports.submitAnswer = async (req, res) => {
       });
     }
 
-    // Process answer
     const isCorrect = userAnswer === currentQuestion.correctAlternative;
     currentQuestion.userAnswer = userAnswer;
     currentQuestion.isCorrect = isCorrect;
@@ -214,13 +252,14 @@ exports.submitAnswer = async (req, res) => {
 
     if (isCorrect) {
       user.points = (user.points || 0) + 1;
-
-      const newLevel = Math.floor(user.points / 100) + 1;
+      const newLevel = Math.floor(user.points / 15) + 1;
       if (newLevel > user.level) {
         user.level = newLevel;
       }
     } else {
-      user.points = Math.max(0, (user.points || 0) - 1);
+      if (user.points > 0) {
+        user.points -= 1;
+      }
       user.vidas -= 1;
 
       if (user.vidas <= 0) {
@@ -260,7 +299,7 @@ exports.submitAnswer = async (req, res) => {
     return res.json({
       correct: isCorrect,
       vidasRestantes: user.vidas,
-      pointsEarned: isCorrect ? 10 : -5,
+      pointsEarned: isCorrect ? 1 : user.points > 0 ? -1 : 0,
       currentPoints: user.points,
       level: user.level,
       isComplete,
@@ -384,17 +423,40 @@ exports.getSimuladosByDiscipline = async (req, res) => {
 
 exports.getSimuladoDetailsById = async (req, res) => {
   try {
-    const { discipline, simuladoNumber } = req.body;
-    const user = await User.findById(req.user.id);
+    console.time("getSimuladoDetailsById");
+    const { discipline, simuladoNumber, language } = req.body;
 
-    const validDisciplines = ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"];
-    if (!validDisciplines.includes(discipline)) {
+    // Fetch only necessary fields
+    const user = await User.findById(req.user.id).select("simuladoAttempts");
+
+    const validDisciplines = [
+      "matematica",
+      "linguagens",
+      "linguagens-ingles",
+      "linguagens-espanhol",
+      "ciencias-humanas",
+      "ciencias-natureza",
+    ];
+
+    let disciplineKey = discipline;
+    if (discipline === "linguagens" && language) {
+      disciplineKey = `linguagens-${language}`;
+    }
+
+    if (!validDisciplines.includes(disciplineKey)) {
       return res.status(400).json({
-        message: "Disciplina inválida",
+        message: "Disciplina ou idioma inválido",
       });
     }
 
-    const simulado = user.simuladoAttempts[discipline].find(
+    // Validate if discipline exists
+    if (!user?.simuladoAttempts?.[disciplineKey]) {
+      return res.status(404).json({
+        message: "Nenhum simulado encontrado para esta disciplina",
+      });
+    }
+
+    const simulado = user.simuladoAttempts[disciplineKey].find(
       (s) => s.simuladoNumber === parseInt(simuladoNumber)
     );
 
@@ -404,18 +466,20 @@ exports.getSimuladoDetailsById = async (req, res) => {
       });
     }
 
-    const detailedSimulado = {
+    console.timeEnd("getSimuladoDetailsById");
+
+    return res.json({
       id: simulado._id,
-      discipline: simulado.discipline,
+      discipline: disciplineKey,
       simuladoNumber: simulado.simuladoNumber,
       year: simulado.year,
       startedAt: simulado.startedAt,
       completedAt: simulado.completedAt,
       status: simulado.status,
       score: simulado.score,
-      totalQuestions: simulado.questions.length,
-      correctAnswers: simulado.questions.filter((q) => q.isCorrect).length,
-      questions: simulado.questions.map((q) => ({
+      totalQuestions: simulado.questions?.length || 0,
+      correctAnswers: simulado.questions?.filter((q) => q.isCorrect)?.length || 0,
+      questions: simulado.questions?.map((q) => ({
         questionId: q.questionId,
         index: q.index,
         title: q.title,
@@ -426,11 +490,11 @@ exports.getSimuladoDetailsById = async (req, res) => {
         isCorrect: q.isCorrect,
         answeredAt: q.answeredAt,
       })),
-    };
-
-    return res.json(detailedSimulado);
+    });
   } catch (error) {
-    console.error("Erro:", error);
-    res.status(500).json({ message: error.message });
+    console.error("Get simulado details error:", error);
+    res.status(500).json({
+      message: "Erro ao buscar detalhes do simulado",
+    });
   }
 };
