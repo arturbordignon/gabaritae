@@ -85,7 +85,7 @@ exports.startSimulado = async (req, res) => {
       });
     }
 
-    if (user.vidas < 1) {
+    if (user.vidas <= 0) {
       if (user.simuladoAttempts[disciplineKey]) {
         user.simuladoAttempts[disciplineKey] = user.simuladoAttempts[disciplineKey].filter(
           (s) => s.status === "completed"
@@ -222,40 +222,46 @@ exports.submitAnswer = async (req, res) => {
     currentQuestion.isCorrect = isCorrect;
     currentQuestion.answeredAt = new Date();
 
-    // Atualiza pontos e vidas
+    // Atualizar pontos e vidas
     if (isCorrect) {
       user.points = (user.points || 0) + 1;
     } else {
       user.points = Math.max((user.points || 0) - 1, 0);
       user.vidas -= 1;
 
+      // Caso vidas acabem
       if (user.vidas <= 0) {
-        const proximaVida = new Date();
-        proximaVida.setHours(proximaVida.getHours() + 3);
+        // Preencher questões restantes como vazias
+        const unansweredQuestions = currentAttempt.questions.filter((q) => !q.userAnswer);
+        unansweredQuestions.forEach((q) => {
+          q.userAnswer = null; // Resposta vazia
+          q.isCorrect = false;
+          q.answeredAt = new Date();
+        });
 
-        user.proximaVida = proximaVida;
+        // Salvar o simulado como completo
+        currentAttempt.completedAt = new Date();
+        currentAttempt.status = "completed";
+        currentAttempt.score = currentAttempt.questions.filter((q) => q.isCorrect).length;
 
-        user.simuladoAttempts[discipline] = user.simuladoAttempts[discipline].filter(
-          (attempt) => attempt._id.toString() !== currentAttempt._id.toString()
-        );
-
+        // Limpar simulado ativo
         user.currentSimulado = null;
+
         await user.save();
 
         return res.status(400).json({
-          message:
-            "Você perdeu todas as vidas! O simulado foi excluído. Tente novamente quando as vidas forem restauradas.",
+          message: "Você perdeu todas as vidas! O simulado foi concluído automaticamente.",
           vidasRestantes: 0,
-          proximaVida: user.proximaVida,
-          simuladoDeleted: true,
+          simuladoCompleted: true,
+          simuladoDetails: {
+            simuladoNumber: currentAttempt.simuladoNumber,
+            score: currentAttempt.score,
+            totalQuestions: currentAttempt.questions.length,
+          },
         });
       }
     }
 
-    const newLevel = Math.floor(user.points / 15) + 1;
-    user.level = newLevel;
-
-    // Verifica se o simulado foi concluído
     const isComplete = questionIndex === currentAttempt.questions.length - 1;
 
     if (isComplete) {
@@ -274,7 +280,7 @@ exports.submitAnswer = async (req, res) => {
       vidasRestantes: user.vidas,
       pointsEarned: isCorrect ? 1 : -1,
       currentPoints: user.points,
-      level: user.level,
+      level: Math.floor(user.points / 15) + 1,
       isComplete,
       currentQuestionIndex: isComplete ? null : user.currentSimulado.questionIndex,
       answer: {
