@@ -317,7 +317,20 @@ exports.getSimuladoDetails = async (req, res) => {
     const { discipline, simuladoNumber } = req.params;
     const user = await User.findById(req.user.id);
 
-    const simulado = user.simuladoAttempts[discipline].find(
+    const validDisciplines = [
+      "matematica",
+      "ciencias-humanas",
+      "ciencias-natureza",
+      "linguagens",
+      "linguagens-ingles",
+      "linguagens-espanhol",
+    ];
+
+    if (!validDisciplines.includes(discipline)) {
+      return res.status(400).json({ message: "Disciplina inválida" });
+    }
+
+    const simulado = user.simuladoAttempts[discipline]?.find(
       (s) => s.simuladoNumber === parseInt(simuladoNumber)
     );
 
@@ -359,17 +372,32 @@ exports.getExams = async (req, res) => {
 
 exports.getSimuladosByDiscipline = async (req, res) => {
   try {
-    const { discipline } = req.body;
-    const user = await User.findById(req.user.id);
+    const { discipline, language } = req.body;
 
-    const validDisciplines = ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"];
-    if (!validDisciplines.includes(discipline)) {
-      return res.status(400).json({
-        message: "Disciplina inválida",
-      });
+    const validDisciplines = [
+      "matematica",
+      "ciencias-humanas",
+      "ciencias-natureza",
+      "linguagens",
+      "linguagens-ingles",
+      "linguagens-espanhol",
+    ];
+
+    let disciplineKey = discipline;
+    if (discipline === "linguagens" && language) {
+      if (!["ingles", "espanhol"].includes(language)) {
+        return res.status(400).json({ message: "Idioma inválido para disciplina de linguagens" });
+      }
+      disciplineKey = `linguagens-${language}`;
     }
 
-    const disciplineSimulados = user.simuladoAttempts[discipline] || [];
+    if (!validDisciplines.includes(disciplineKey)) {
+      return res.status(400).json({ message: "Disciplina inválida" });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    const disciplineSimulados = user.simuladoAttempts[disciplineKey] || [];
 
     if (!disciplineSimulados.length) {
       return res.status(404).json({
@@ -391,57 +419,45 @@ exports.getSimuladosByDiscipline = async (req, res) => {
 
     return res.json(simulados);
   } catch (error) {
-    console.error("Get simulados by discipline error:", error);
+    console.error("Erro ao pegar simulados para cada disciplina:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
 exports.getSimuladoDetailsById = async (req, res) => {
   try {
-    console.time("getSimuladoDetailsById");
     const { discipline, simuladoNumber, language } = req.body;
-
-    // Fetch only necessary fields
-    const user = await User.findById(req.user.id).select("simuladoAttempts");
 
     const validDisciplines = [
       "matematica",
+      "ciencias-humanas",
+      "ciencias-natureza",
       "linguagens",
       "linguagens-ingles",
       "linguagens-espanhol",
-      "ciencias-humanas",
-      "ciencias-natureza",
     ];
 
     let disciplineKey = discipline;
     if (discipline === "linguagens" && language) {
+      if (!["ingles", "espanhol"].includes(language)) {
+        return res.status(400).json({ message: "Idioma inválido para disciplina de linguagens" });
+      }
       disciplineKey = `linguagens-${language}`;
     }
 
     if (!validDisciplines.includes(disciplineKey)) {
-      return res.status(400).json({
-        message: "Disciplina ou idioma inválido",
-      });
+      return res.status(400).json({ message: "Disciplina ou idioma inválido" });
     }
 
-    // Validate if discipline exists
-    if (!user?.simuladoAttempts?.[disciplineKey]) {
-      return res.status(404).json({
-        message: "Nenhum simulado encontrado para esta disciplina",
-      });
-    }
+    const user = await User.findById(req.user.id);
 
-    const simulado = user.simuladoAttempts[disciplineKey].find(
+    const simulado = user.simuladoAttempts[disciplineKey]?.find(
       (s) => s.simuladoNumber === parseInt(simuladoNumber)
     );
 
     if (!simulado) {
-      return res.status(404).json({
-        message: "Simulado não encontrado",
-      });
+      return res.status(404).json({ message: "Simulado não encontrado" });
     }
-
-    console.timeEnd("getSimuladoDetailsById");
 
     return res.json({
       id: simulado._id,
@@ -468,8 +484,6 @@ exports.getSimuladoDetailsById = async (req, res) => {
     });
   } catch (error) {
     console.error("Get simulado details error:", error);
-    res.status(500).json({
-      message: "Erro ao buscar detalhes do simulado",
-    });
+    res.status(500).json({ message: error.message });
   }
 };

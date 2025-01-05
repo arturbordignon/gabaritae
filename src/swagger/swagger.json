@@ -707,8 +707,17 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "enum": [
+                "matematica",
+                "ciencias-humanas",
+                "ciencias-natureza",
+                "linguagens",
+                "linguagens-ingles",
+                "linguagens-espanhol"
+              ]
+            },
+            "description": "Disciplina do simulado (inclui idiomas para 'linguagens')"
           },
           {
             "name": "simuladoNumber",
@@ -716,7 +725,8 @@
             "required": true,
             "schema": {
               "type": "integer"
-            }
+            },
+            "description": "Número do simulado a ser recuperado"
           }
         ],
         "responses": {
@@ -740,11 +750,6 @@
                           "year": { "type": "integer" },
                           "title": { "type": "string" },
                           "context": { "type": "string" },
-                          "files": {
-                            "type": "array",
-                            "items": { "type": "string" }
-                          },
-                          "alternativesIntroduction": { "type": "string" },
                           "alternatives": {
                             "type": "array",
                             "items": {
@@ -752,17 +757,13 @@
                               "properties": {
                                 "letter": { "type": "string" },
                                 "text": { "type": "string" },
-                                "file": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
+                                "file": { "type": "string", "nullable": true }
                               }
                             }
                           },
                           "correctAlternative": { "type": "string" },
                           "userAnswer": { "type": "string" },
                           "isCorrect": { "type": "boolean" },
-                          "responseTime": { "type": "integer" },
                           "answeredAt": { "type": "string", "format": "date-time" }
                         }
                       }
@@ -777,21 +778,15 @@
             }
           },
           "404": {
-            "description": "Simulado not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": { "type": "string" }
-                  }
-                }
-              }
-            }
+            "description": "Simulado not found"
+          },
+          "400": {
+            "description": "Invalid discipline"
           }
         }
       }
     },
+
     "/simulado/status": {
       "get": {
         "summary": "Get the current status of the simulado",
@@ -936,7 +931,15 @@
                 "properties": {
                   "discipline": {
                     "type": "string",
-                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
+                    "enum": [
+                      "matematica",
+                      "ciencias-humanas",
+                      "ciencias-natureza",
+                      "linguagens",
+                      "linguagens-ingles",
+                      "linguagens-espanhol"
+                    ],
+                    "description": "Disciplina do histórico (com idiomas para linguagens)"
                   }
                 },
                 "required": ["discipline"]
@@ -972,6 +975,7 @@
         }
       }
     },
+
     "/simulado/historico/detalhes": {
       "post": {
         "summary": "Obter detalhes completos de um simulado específico",
@@ -986,7 +990,15 @@
                 "properties": {
                   "discipline": {
                     "type": "string",
-                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
+                    "enum": [
+                      "matematica",
+                      "ciencias-humanas",
+                      "ciencias-natureza",
+                      "linguagens",
+                      "linguagens-ingles",
+                      "linguagens-espanhol"
+                    ],
+                    "description": "Disciplina do simulado"
                   },
                   "simuladoNumber": {
                     "type": "integer"
@@ -995,8 +1007,8 @@
                 "required": ["discipline", "simuladoNumber"]
               },
               "example": {
-                "discipline": "matematica",
-                "simuladoNumber": 1
+                "discipline": "linguagens-ingles",
+                "simuladoNumber": 2
               }
             }
           }
@@ -1035,11 +1047,7 @@
                               "properties": {
                                 "letter": { "type": "string" },
                                 "text": { "type": "string" },
-                                "file": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "_id": { "type": "string" }
+                                "file": { "type": "string", "nullable": true }
                               }
                             }
                           },
@@ -1051,50 +1059,9 @@
                       }
                     }
                   }
-                },
-                "example": {
-                  "id": "6771a99cd5691ccfd33f44ea",
-                  "discipline": "matematica",
-                  "simuladoNumber": 1,
-                  "year": 2019,
-                  "startedAt": "2024-12-29T19:57:16.347Z",
-                  "completedAt": "2024-12-29T19:58:19.032Z",
-                  "status": "completed",
-                  "score": 2,
-                  "totalQuestions": 10,
-                  "correctAnswers": 2,
-                  "questions": [
-                    {
-                      "questionId": "150",
-                      "index": 150,
-                      "title": "Questão 150 - ENEM 2019",
-                      "context": "Uma pessoa se interessou em adquirir um produto...",
-                      "alternatives": [
-                        {
-                          "letter": "A",
-                          "text": "398,02",
-                          "file": null,
-                          "_id": "6771a99cd5691ccfd33f44ec"
-                        }
-                      ],
-                      "userAnswer": "A",
-                      "correctAlternative": "B",
-                      "isCorrect": false,
-                      "answeredAt": "2024-12-29T19:57:54.457Z"
-                    }
-                  ]
                 }
               }
             }
-          },
-          "400": {
-            "description": "Disciplina inválida"
-          },
-          "404": {
-            "description": "Simulado não encontrado"
-          },
-          "500": {
-            "description": "Erro interno do servidor"
           }
         }
       }
