@@ -1,10 +1,8 @@
 const axios = require("axios");
 const User = require("../models/User");
-const moment = require("moment");
 
 const QUESTIONS_PER_SIMULADO = 10;
 const MAX_SIMULADOS_PER_DISCIPLINE = 10;
-const SIMULADO_TIME_LIMIT_SECONDS = 50 * 60;
 
 const disciplineOffsets = {
   matematica: 150,
@@ -28,8 +26,6 @@ const fetchQuestions = async (year, discipline) => {
     if (!response.data || !response.data.questions) {
       throw new Error("Invalid response format from API");
     }
-
-    console.log("Raw API Response:", JSON.stringify(response.data.questions[2], null, 2));
 
     const questions = response.data.questions.slice(0, QUESTIONS_PER_SIMULADO);
 
@@ -176,10 +172,19 @@ exports.startSimulado = async (req, res) => {
 exports.submitAnswer = async (req, res) => {
   try {
     const { questionId, userAnswer } = req.body;
+
+    if (!questionId || !userAnswer) {
+      return res.status(400).json({
+        message: "QuestionId e resposta são obrigatórios",
+      });
+    }
+
     const user = await User.findById(req.user.id);
 
     if (!user.currentSimulado) {
-      return res.status(404).json({ message: "Nenhum simulado ativo" });
+      return res.status(404).json({
+        message: "Nenhum simulado ativo",
+      });
     }
 
     const { discipline } = user.currentSimulado;
@@ -188,27 +193,23 @@ exports.submitAnswer = async (req, res) => {
     );
 
     if (!currentAttempt) {
-      return res.status(404).json({ message: "Simulado não encontrado" });
+      return res.status(404).json({
+        message: "Simulado não encontrado",
+      });
     }
 
-    // Debug logging
-    console.log("Debug info:", {
-      currentSimulado: user.currentSimulado,
-      questionId,
-      totalQuestions: currentAttempt.questions.length,
-      questions: currentAttempt.questions.map((q) => q.questionId),
-    });
-
-    // Initialize questionIndex if undefined
+    // Initialize question index if needed
     if (user.currentSimulado.questionIndex === undefined) {
       user.currentSimulado.questionIndex = 0;
     }
 
-    // Validate question sequence
     const questionIndex = currentAttempt.questions.findIndex((q) => q.questionId === questionId);
     if (questionIndex === -1) {
-      return res.status(404).json({ message: "Questão não encontrada" });
+      return res.status(404).json({
+        message: "Questão não encontrada",
+      });
     }
+
     if (questionIndex !== user.currentSimulado.questionIndex) {
       return res.status(400).json({
         message: "Questão fora de ordem",
@@ -217,16 +218,6 @@ exports.submitAnswer = async (req, res) => {
       });
     }
 
-    // Validate question index
-    if (user.currentSimulado.questionIndex >= currentAttempt.questions.length) {
-      return res.status(400).json({
-        message: "Índice de questão inválido",
-        currentIndex: user.currentSimulado.questionIndex,
-        totalQuestions: currentAttempt.questions.length,
-      });
-    }
-
-    // Get current question
     const currentQuestion = currentAttempt.questions[user.currentSimulado.questionIndex];
 
     if (!currentQuestion) {
@@ -237,7 +228,6 @@ exports.submitAnswer = async (req, res) => {
       });
     }
 
-    // Validate if already answered
     if (currentQuestion.userAnswer) {
       return res.status(400).json({
         message: "Esta questão já foi respondida",
@@ -250,6 +240,7 @@ exports.submitAnswer = async (req, res) => {
     currentQuestion.isCorrect = isCorrect;
     currentQuestion.answeredAt = new Date();
 
+    // Update points and level
     if (isCorrect) {
       user.points = (user.points || 0) + 1;
       const newLevel = Math.floor(user.points / 15) + 1;
@@ -267,16 +258,21 @@ exports.submitAnswer = async (req, res) => {
         proximaVida.setHours(proximaVida.getHours() + 3);
         user.proximaVida = proximaVida;
 
-        user.simuladoAttempts = user.simuladoAttempts.filter(
-          (attempt) => attempt._id.toString() !== currentAttempt._id.toString()
-        );
+        if (user.simuladoAttempts[discipline]) {
+          user.simuladoAttempts[discipline] = user.simuladoAttempts[discipline].filter(
+            (attempt) => attempt._id.toString() !== currentAttempt._id.toString()
+          );
+        }
+
         user.currentSimulado = null;
         await user.save();
 
         return res.status(400).json({
-          message: "Você perdeu todas as vidas! Tente novamente mais tarde.",
+          message:
+            "Você perdeu todas as vidas! O simulado foi excluído. Tente novamente mais tarde.",
           vidasRestantes: 0,
           proximaVida: proximaVida,
+          simuladoDeleted: true,
         });
       }
     }
@@ -287,8 +283,6 @@ exports.submitAnswer = async (req, res) => {
       currentAttempt.completedAt = new Date();
       currentAttempt.status = "completed";
       currentAttempt.score = currentAttempt.questions.filter((q) => q.isCorrect).length;
-
-      user.points += 0;
       user.currentSimulado = null;
     } else {
       user.currentSimulado.questionIndex += 1;
@@ -314,7 +308,9 @@ exports.submitAnswer = async (req, res) => {
     });
   } catch (error) {
     console.error("Submit answer error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: "Erro ao submeter resposta",
+    });
   }
 };
 
