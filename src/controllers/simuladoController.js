@@ -2,7 +2,6 @@ const axios = require("axios");
 const User = require("../models/User");
 
 const QUESTIONS_PER_SIMULADO = 10;
-const MAX_SIMULADOS_PER_DISCIPLINE = 10;
 
 const disciplineOffsets = {
   matematica: 150,
@@ -85,7 +84,7 @@ exports.startSimulado = async (req, res) => {
       });
     }
 
-    if (user.vidas <= 0) {
+    if (user.vidas < 1) {
       if (user.simuladoAttempts[disciplineKey]) {
         user.simuladoAttempts[disciplineKey] = user.simuladoAttempts[disciplineKey].filter(
           (s) => s.status === "completed"
@@ -111,10 +110,6 @@ exports.startSimulado = async (req, res) => {
     const completedCount = user.simuladoAttempts[disciplineKey].filter(
       (s) => s.status === "completed"
     ).length;
-
-    if (completedCount >= MAX_SIMULADOS_PER_DISCIPLINE) {
-      return res.status(400).json({ message: "Limite de simulados atingido" });
-    }
 
     const questions = await fetchQuestions(year, disciplineKey, language);
 
@@ -229,17 +224,14 @@ exports.submitAnswer = async (req, res) => {
       user.points = Math.max((user.points || 0) - 1, 0);
       user.vidas -= 1;
 
-      // Caso vidas acabem
-      if (user.vidas <= 0) {
-        // Preencher questões restantes como vazias
+      if (user.vidas < 1) {
         const unansweredQuestions = currentAttempt.questions.filter((q) => !q.userAnswer);
         unansweredQuestions.forEach((q) => {
-          q.userAnswer = null; // Resposta vazia
+          q.userAnswer = null;
           q.isCorrect = false;
           q.answeredAt = new Date();
         });
 
-        // Salvar o simulado como completo
         currentAttempt.completedAt = new Date();
         currentAttempt.status = "completed";
         currentAttempt.score = currentAttempt.questions.filter((q) => q.isCorrect).length;
