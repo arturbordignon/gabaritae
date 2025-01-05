@@ -74,23 +74,42 @@ exports.startSimulado = async (req, res) => {
       disciplineKey = `linguagens-${language}`;
     }
 
-    const hasActiveSimulado = Object.values(user.simuladoAttempts || {}).some((attempts) =>
-      attempts?.some((s) => s.status === "active")
-    );
-
+    const hasActiveSimulado = user.currentSimulado?.attemptId;
     if (hasActiveSimulado) {
-      return res.status(400).json({
-        message: "Você já tem um simulado em andamento",
-      });
+      const currentAttempt = Object.values(user.simuladoAttempts || {})
+        .flat()
+        .find((attempt) => attempt._id.toString() === user.currentSimulado.attemptId.toString());
+
+      if (currentAttempt) {
+        const answeredQuestions = currentAttempt.questions.filter((q) => q.userAnswer);
+
+        if (answeredQuestions.length === 0) {
+          // Excluir simulado se nenhuma questão foi respondida
+          Object.keys(user.simuladoAttempts).forEach((discipline) => {
+            user.simuladoAttempts[discipline] = user.simuladoAttempts[discipline].filter(
+              (attempt) => attempt._id.toString() !== currentAttempt._id.toString()
+            );
+          });
+        } else {
+          currentAttempt.questions.forEach((q) => {
+            if (!q.userAnswer) {
+              q.userAnswer = null;
+              q.isCorrect = false;
+              q.answeredAt = new Date();
+            }
+          });
+
+          currentAttempt.completedAt = new Date();
+          currentAttempt.status = "completed";
+          currentAttempt.score = answeredQuestions.filter((q) => q.isCorrect).length;
+        }
+
+        user.currentSimulado = null;
+        await user.save();
+      }
     }
 
     if (user.vidas < 1) {
-      if (user.simuladoAttempts[disciplineKey]) {
-        user.simuladoAttempts[disciplineKey] = user.simuladoAttempts[disciplineKey].filter(
-          (s) => s.status === "completed"
-        );
-      }
-
       const proximaVida = new Date();
       proximaVida.setHours(proximaVida.getHours() + 3);
       user.proximaVida = proximaVida;
