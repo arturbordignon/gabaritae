@@ -7,11 +7,13 @@ const MAX_SIMULADOS_PER_DISCIPLINE = 10;
 const disciplineOffsets = {
   matematica: 150,
   linguagens: 0,
+  "linguagens-ingles": 0,
+  "linguagens-espanhol": 0,
   "ciencias-humanas": 46,
   "ciencias-natureza": 100,
 };
 
-const fetchQuestions = async (year, discipline) => {
+const fetchQuestions = async (year, discipline, language) => {
   try {
     const offset = disciplineOffsets[discipline];
     const apiUrl = `https://api.enem.dev/v1/exams/${year}/questions`;
@@ -20,6 +22,7 @@ const fetchQuestions = async (year, discipline) => {
       params: {
         limit: QUESTIONS_PER_SIMULADO,
         offset: offset,
+        language: discipline.startsWith("linguagens") ? language : undefined,
       },
     });
 
@@ -48,8 +51,8 @@ const fetchQuestions = async (year, discipline) => {
       correctAlternative: question.correctAlternative,
     }));
   } catch (error) {
-    console.error("API Request failed:", error.response?.data || error.message);
-    throw error;
+    console.error("Erro ao buscar simulado:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -68,6 +71,7 @@ exports.startSimulado = async (req, res) => {
           message: "Idioma inválido ou não especificado para disciplina de linguagens",
         });
       }
+
       disciplineKey = `linguagens-${language}`;
     }
 
@@ -112,7 +116,7 @@ exports.startSimulado = async (req, res) => {
       return res.status(400).json({ message: "Limite de simulados atingido" });
     }
 
-    const questions = await fetchQuestions(year, discipline);
+    const questions = await fetchQuestions(year, disciplineKey, language);
 
     const attempt = {
       discipline: disciplineKey,
@@ -198,11 +202,6 @@ exports.submitAnswer = async (req, res) => {
       });
     }
 
-    // Initialize question index if needed
-    if (user.currentSimulado.questionIndex === undefined) {
-      user.currentSimulado.questionIndex = 0;
-    }
-
     const questionIndex = currentAttempt.questions.findIndex((q) => q.questionId === questionId);
     if (questionIndex === -1) {
       return res.status(404).json({
@@ -210,28 +209,11 @@ exports.submitAnswer = async (req, res) => {
       });
     }
 
-    if (questionIndex !== user.currentSimulado.questionIndex) {
-      return res.status(400).json({
-        message: "Questão fora de ordem",
-        expectedQuestionId: currentAttempt.questions[user.currentSimulado.questionIndex].questionId,
-        currentQuestionIndex: user.currentSimulado.questionIndex,
-      });
-    }
-
-    const currentQuestion = currentAttempt.questions[user.currentSimulado.questionIndex];
-
-    if (!currentQuestion) {
-      return res.status(404).json({
-        message: "Questão não encontrada",
-        questionId,
-        index: user.currentSimulado.questionIndex,
-      });
-    }
+    const currentQuestion = currentAttempt.questions[questionIndex];
 
     if (currentQuestion.userAnswer) {
       return res.status(400).json({
         message: "Esta questão já foi respondida",
-        currentQuestionIndex: user.currentSimulado.questionIndex,
       });
     }
 
@@ -240,44 +222,41 @@ exports.submitAnswer = async (req, res) => {
     currentQuestion.isCorrect = isCorrect;
     currentQuestion.answeredAt = new Date();
 
-    // Update points and level
+    // Atualiza pontos e vidas
     if (isCorrect) {
       user.points = (user.points || 0) + 1;
-      const newLevel = Math.floor(user.points / 15) + 1;
-      if (newLevel > user.level) {
-        user.level = newLevel;
-      }
     } else {
-      if (user.points > 0) {
-        user.points -= 1;
-      }
+      user.points = Math.max((user.points || 0) - 1, 0);
       user.vidas -= 1;
 
       if (user.vidas <= 0) {
         const proximaVida = new Date();
         proximaVida.setHours(proximaVida.getHours() + 3);
+
         user.proximaVida = proximaVida;
 
-        if (user.simuladoAttempts[discipline]) {
-          user.simuladoAttempts[discipline] = user.simuladoAttempts[discipline].filter(
-            (attempt) => attempt._id.toString() !== currentAttempt._id.toString()
-          );
-        }
+        user.simuladoAttempts[discipline] = user.simuladoAttempts[discipline].filter(
+          (attempt) => attempt._id.toString() !== currentAttempt._id.toString()
+        );
 
         user.currentSimulado = null;
         await user.save();
 
         return res.status(400).json({
           message:
-            "Você perdeu todas as vidas! O simulado foi excluído. Tente novamente mais tarde.",
+            "Você perdeu todas as vidas! O simulado foi excluído. Tente novamente quando as vidas forem restauradas.",
           vidasRestantes: 0,
-          proximaVida: proximaVida,
+          proximaVida: user.proximaVida,
           simuladoDeleted: true,
         });
       }
     }
 
-    const isComplete = user.currentSimulado.questionIndex === currentAttempt.questions.length - 1;
+    const newLevel = Math.floor(user.points / 15) + 1;
+    user.level = newLevel;
+
+    // Verifica se o simulado foi concluído
+    const isComplete = questionIndex === currentAttempt.questions.length - 1;
 
     if (isComplete) {
       currentAttempt.completedAt = new Date();
@@ -285,7 +264,7 @@ exports.submitAnswer = async (req, res) => {
       currentAttempt.score = currentAttempt.questions.filter((q) => q.isCorrect).length;
       user.currentSimulado = null;
     } else {
-      user.currentSimulado.questionIndex += 1;
+      user.currentSimulado.questionIndex = questionIndex + 1;
     }
 
     await user.save();
@@ -293,7 +272,7 @@ exports.submitAnswer = async (req, res) => {
     return res.json({
       correct: isCorrect,
       vidasRestantes: user.vidas,
-      pointsEarned: isCorrect ? 1 : user.points > 0 ? -1 : 0,
+      pointsEarned: isCorrect ? 1 : -1,
       currentPoints: user.points,
       level: user.level,
       isComplete,

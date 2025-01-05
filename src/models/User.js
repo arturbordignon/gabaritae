@@ -46,9 +46,11 @@ const userSchema = new mongoose.Schema({
   points: { type: Number, default: 0 },
   offsets: {
     matematica: { type: Number, default: 0 },
-    linguagens: { type: Number, default: 0 },
     "ciencias-humanas": { type: Number, default: 0 },
     "ciencias-natureza": { type: Number, default: 0 },
+    linguagens: { type: Number, default: 0 },
+    "linguagens-ingles": { type: Number, default: 0 },
+    "linguagens-espanhol": { type: Number, default: 0 },
   },
   simuladoAttempts: {
     matematica: [simuladoAttemptSchema],

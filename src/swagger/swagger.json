@@ -484,7 +484,8 @@
                   },
                   "discipline": {
                     "type": "string",
-                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"]
+                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"],
+                    "description": "Disciplina do simulado"
                   },
                   "language": {
                     "type": "string",
@@ -505,30 +506,43 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "simuladoId": { "type": "string" },
-                    "vidas": { "type": "integer" },
-                    "points": { "type": "integer" },
-                    "level": { "type": "integer" },
-                    "simuladoNumber": { "type": "integer" },
+                    "simuladoId": { "type": "string", "description": "ID do simulado criado" },
+                    "vidas": { "type": "integer", "description": "Vidas restantes do usuário" },
+                    "points": {
+                      "type": "integer",
+                      "description": "Pontos acumulados pelo usuário"
+                    },
+                    "level": { "type": "integer", "description": "Nível atual do usuário" },
+                    "simuladoNumber": {
+                      "type": "integer",
+                      "description": "Número do simulado atual"
+                    },
                     "questions": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "questionId": { "type": "string" },
-                          "index": { "type": "integer" },
-                          "title": { "type": "string" },
-                          "context": { "type": "string" },
+                          "questionId": { "type": "string", "description": "ID da questão" },
+                          "index": { "type": "integer", "description": "Índice da questão" },
+                          "title": { "type": "string", "description": "Título da questão" },
+                          "context": {
+                            "type": "string",
+                            "description": "Contexto ou enunciado da questão"
+                          },
                           "alternatives": {
                             "type": "array",
                             "items": {
                               "type": "object",
                               "properties": {
-                                "letter": { "type": "string" },
-                                "text": { "type": "string" },
+                                "letter": {
+                                  "type": "string",
+                                  "description": "Letra da alternativa"
+                                },
+                                "text": { "type": "string", "description": "Texto da alternativa" },
                                 "file": {
                                   "type": "string",
-                                  "nullable": true
+                                  "nullable": true,
+                                  "description": "Arquivo associado à alternativa (se aplicável)"
                                 }
                               }
                             }
@@ -554,7 +568,8 @@
                         "Você já tem um simulado em andamento",
                         "Idioma inválido ou não especificado para disciplina de linguagens",
                         "Limite de simulados atingido"
-                      ]
+                      ],
+                      "description": "Mensagem de erro detalhada"
                     }
                   }
                 }
@@ -568,11 +583,28 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "message": { "type": "string" },
+                    "message": {
+                      "type": "string",
+                      "description": "Mensagem indicando que não há vidas disponíveis"
+                    },
                     "proximaVida": {
                       "type": "string",
-                      "format": "date-time"
+                      "format": "date-time",
+                      "description": "Data e hora em que a próxima vida estará disponível"
                     }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "description": "Mensagem de erro detalhada" }
                   }
                 }
               }
