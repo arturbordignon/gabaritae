@@ -81,10 +81,31 @@ exports.startSimulado = async (req, res) => {
         .find((attempt) => attempt._id.toString() === user.currentSimulado.attemptId.toString());
 
       if (currentAttempt) {
+        const maxSimuladoTime = 50 * 60 * 1000;
+        const elapsedTime = new Date() - new Date(currentAttempt.startedAt);
+
+        if (elapsedTime > maxSimuladoTime) {
+          currentAttempt.completedAt = new Date();
+          currentAttempt.status = "completed";
+          currentAttempt.score = currentAttempt.questions.filter((q) => q.isCorrect).length;
+
+          user.currentSimulado = null;
+          await user.save();
+
+          return res.status(400).json({
+            message: "O tempo máximo do simulado foi excedido. Ele foi concluído automaticamente.",
+            simuladoCompleted: true,
+            simuladoDetails: {
+              simuladoNumber: currentAttempt.simuladoNumber,
+              score: currentAttempt.score,
+              totalQuestions: currentAttempt.questions.length,
+            },
+          });
+        }
+
         const answeredQuestions = currentAttempt.questions.filter((q) => q.userAnswer);
 
         if (answeredQuestions.length === 0) {
-          // Excluir simulado se nenhuma questão foi respondida
           Object.keys(user.simuladoAttempts).forEach((discipline) => {
             user.simuladoAttempts[discipline] = user.simuladoAttempts[discipline].filter(
               (attempt) => attempt._id.toString() !== currentAttempt._id.toString()
