@@ -484,7 +484,7 @@
                   },
                   "discipline": {
                     "type": "string",
-                    "enum": ["matematica", "linguagens", "ciencias-humanas", "ciencias-natureza"],
+                    "enum": ["linguagens", "matematica", "ciencias-humanas", "ciencias-natureza"],
                     "description": "Disciplina do simulado"
                   },
                   "language": {
