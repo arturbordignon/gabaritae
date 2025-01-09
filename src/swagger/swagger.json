@@ -609,6 +609,27 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Sem vidas disponíveis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Mensagem indicando que não há vidas disponíveis"
+                    },
+                    "proximaVida": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Data e hora em que a próxima vida estará disponível (vidas regeneram a cada 3 horas)"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -689,6 +710,27 @@
                     "userAnswer": "A",
                     "correctAnswer": "A",
                     "explanation": "Resposta correta!"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem vidas disponíveis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Mensagem indicando que não há vidas disponíveis"
+                    },
+                    "proximaVida": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Data e hora em que a próxima vida estará disponível"
+                    }
                   }
                 }
               }

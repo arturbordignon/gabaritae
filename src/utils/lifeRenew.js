@@ -8,7 +8,7 @@ const renewLives = async () => {
     const now = new Date();
 
     const usersToUpdate = await User.find({
-      vidas: { $lt: 10 },
+      vidas: { $lt: 40 }, // Updated cap to 40
       proximaVida: { $lte: now },
     });
 
@@ -20,7 +20,7 @@ const renewLives = async () => {
         update: {
           $inc: { vidas: 1 },
           $set: {
-            proximaVida: new Date(now.getTime() + 3 * 60 * 60 * 1000),
+            proximaVida: new Date(now.getTime() + 3 * 60 * 60 * 1000), // Set next life renewal to 3 hours from now
           },
         },
       },
@@ -38,7 +38,7 @@ const renewLives = async () => {
 const startLifeRenewalJob = () => {
   logger.info("Initializing life renewal job...");
   cron.schedule("0 */3 * * *", renewLives);
-  logger.info("Life renewal job scheduled - will run every 3 hours");
+  logger.info("Life renewal job scheduled - will renew lives up to 40 every 3 hours");
 };
 
 module.exports = { startLifeRenewalJob };

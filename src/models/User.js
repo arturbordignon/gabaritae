@@ -41,7 +41,7 @@ const userSchema = new mongoose.Schema({
   category: { type: String, enum: ["ENEM"], required: true },
   resetPasswordCode: { type: String },
   resetPasswordExpire: { type: Date },
-  vidas: { type: Number, default: 10, max: 300, min: 0 },
+  vidas: { type: Number, default: 40, max: 40, min: 0 },
   proximaVida: { type: Date, default: Date.now },
   points: { type: Number, default: 0 },
   offsets: {

@@ -12,6 +12,17 @@ const disciplineOffsets = {
   "ciencias-natureza": 100,
 };
 
+const regenerateLives = (user) => {
+  const now = new Date();
+  if (user.vidas < 40 && user.proximaVida && user.proximaVida <= now) {
+    const hoursElapsed = Math.floor((now - user.proximaVida) / (3 * 60 * 60 * 1000));
+    const livesToAdd = Math.min(hoursElapsed + 1, 40 - user.vidas);
+
+    user.vidas += livesToAdd;
+    user.proximaVida = new Date(user.proximaVida.getTime() + livesToAdd * 3 * 60 * 60 * 1000);
+  }
+};
+
 const fetchQuestions = async (year, discipline, language) => {
   try {
     const offset = disciplineOffsets[discipline];
@@ -131,10 +142,12 @@ exports.startSimulado = async (req, res) => {
     }
 
     if (user.vidas < 1) {
-      const proximaVida = new Date();
-      proximaVida.setHours(proximaVida.getHours() + 3);
-      user.proximaVida = proximaVida;
+      if (!user.proximaVida || user.proximaVida <= new Date()) {
+        user.proximaVida = new Date();
+        user.proximaVida.setHours(user.proximaVida.getHours() + 3);
+      }
 
+      regenerateLives(user);
       await user.save();
 
       return res.status(403).json({
@@ -265,6 +278,11 @@ exports.submitAnswer = async (req, res) => {
       user.vidas -= 1;
 
       if (user.vidas < 1) {
+        if (!user.proximaVida || user.proximaVida <= new Date()) {
+          user.proximaVida = new Date();
+          user.proximaVida.setHours(user.proximaVida.getHours() + 3);
+        }
+
         const unansweredQuestions = currentAttempt.questions.filter((q) => !q.userAnswer);
         unansweredQuestions.forEach((q) => {
           q.userAnswer = null;
@@ -276,7 +294,6 @@ exports.submitAnswer = async (req, res) => {
         currentAttempt.status = "completed";
         currentAttempt.score = currentAttempt.questions.filter((q) => q.isCorrect).length;
 
-        // Limpar simulado ativo
         user.currentSimulado = null;
 
         await user.save();
@@ -284,6 +301,7 @@ exports.submitAnswer = async (req, res) => {
         return res.status(400).json({
           message: "Você perdeu todas as vidas! O simulado foi concluído automaticamente.",
           vidasRestantes: 0,
+          proximaVida: user.proximaVida,
           simuladoCompleted: true,
           simuladoDetails: {
             simuladoNumber: currentAttempt.simuladoNumber,
@@ -304,7 +322,7 @@ exports.submitAnswer = async (req, res) => {
     } else {
       user.currentSimulado.questionIndex = questionIndex + 1;
     }
-
+    regenerateLives(user);
     await user.save();
 
     return res.json({
