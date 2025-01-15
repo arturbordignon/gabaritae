@@ -26,23 +26,63 @@ const regenerateLives = (user) => {
 const fetchQuestions = async (year, discipline, language) => {
   try {
     const offset = disciplineOffsets[discipline];
+    let maxIndex;
+    let rangeStart;
+    let rangeEnd;
+
+    switch (discipline) {
+      case "matematica":
+        rangeStart = 150;
+        rangeEnd = 180;
+        break;
+      case "ciencias-humanas":
+        rangeStart = 46;
+        rangeEnd = 100;
+        break;
+      case "linguagens":
+        rangeStart = 0;
+        rangeEnd = 45;
+        break;
+      default:
+        rangeStart = offset;
+        rangeEnd = offset + QUESTIONS_PER_SIMULADO;
+    }
+
+    maxIndex = rangeEnd - rangeStart;
+
+    if (maxIndex < QUESTIONS_PER_SIMULADO) {
+      res.status(500).json({ message: error.message });
+    }
+
+    const randomIndexes = [];
+    while (randomIndexes.length < QUESTIONS_PER_SIMULADO) {
+      const randomIndex = Math.floor(Math.random() * maxIndex) + rangeStart;
+      if (!randomIndexes.includes(randomIndex)) {
+        randomIndexes.push(randomIndex);
+      }
+    }
+
     const apiUrl = `https://api.enem.dev/v1/exams/${year}/questions`;
 
     const response = await axios.get(apiUrl, {
       params: {
-        limit: QUESTIONS_PER_SIMULADO,
-        offset: offset,
+        limit: maxIndex,
+        offset: rangeStart,
         language: discipline.startsWith("linguagens") ? language : undefined,
       },
     });
 
     if (!response.data || !response.data.questions) {
-      throw new Error("Invalid response format from API");
+      res.status(500).json({ message: response.error });
     }
 
-    const questions = response.data.questions.slice(0, QUESTIONS_PER_SIMULADO);
+    const allQuestions = response.data.questions;
 
-    return questions.map((question, index) => ({
+    const selectedQuestions = randomIndexes.map((index) =>
+      allQuestions.find((q) => q.index === index)
+    );
+
+    return selectedQuestions.map((question, index) => ({
       questionId: question.index.toString(),
       index: question.index,
       year: question.year,
@@ -61,7 +101,6 @@ const fetchQuestions = async (year, discipline, language) => {
       correctAlternative: question.correctAlternative,
     }));
   } catch (error) {
-    console.error("Erro ao buscar simulado:", error);
     res.status(500).json({ message: error.message });
   }
 };
