@@ -50,45 +50,30 @@ const fetchQuestions = async (year, discipline, language, res) => {
     const totalQuestions = rangeEnd - rangeStart;
 
     if (totalQuestions < QUESTIONS_PER_SIMULADO) {
-      if (res) {
-        return res.status(500).json({
-          message: "Intervalo de questões insuficiente para o número solicitado.",
-        });
-      } else {
-        throw new Error("Intervalo de questões insuficiente para o número solicitado.");
-      }
+      throw new Error("Intervalo de questões insuficiente para o número solicitado.");
     }
 
     const apiUrl = `https://api.enem.dev/v1/exams/${year}/questions`;
 
     const response = await axios.get(apiUrl, {
       params: {
-        limit: QUESTIONS_PER_SIMULADO,
+        limit: totalQuestions,
         offset: rangeStart,
         language: discipline.startsWith("linguagens") ? language : undefined,
       },
     });
 
     if (!response.data || !response.data.questions) {
-      if (res) {
-        return res.status(500).json({ message: "Formato inválido de resposta da API." });
-      } else {
-        throw new Error("Formato inválido de resposta da API.");
-      }
+      throw new Error("Formato inválido de resposta da API.");
     }
 
     const allQuestions = response.data.questions;
 
     if (!allQuestions.length) {
-      if (res) {
-        return res
-          .status(500)
-          .json({ message: "Nenhuma questão encontrada para o intervalo especificado." });
-      } else {
-        throw new Error("Nenhuma questão encontrada para o intervalo especificado.");
-      }
+      throw new Error("Nenhuma questão encontrada para o intervalo especificado.");
     }
 
+    // Randomize questions
     const validIndexes = allQuestions.map((q) => q.index);
 
     const randomIndexes = [];
@@ -104,13 +89,7 @@ const fetchQuestions = async (year, discipline, language, res) => {
     );
 
     if (selectedQuestions.includes(undefined)) {
-      if (res) {
-        return res
-          .status(500)
-          .json({ message: "Erro ao mapear questões aleatórias. Índices inconsistentes." });
-      } else {
-        throw new Error("Erro ao mapear questões aleatórias. Índices inconsistentes.");
-      }
+      throw new Error("Erro ao mapear questões aleatórias. Índices inconsistentes.");
     }
 
     return selectedQuestions.map((question) => ({
@@ -133,7 +112,7 @@ const fetchQuestions = async (year, discipline, language, res) => {
     }));
   } catch (error) {
     if (res) {
-      return res.status(500).json({ message: error.message });
+      res.status(500).json({ message: error.message });
     } else {
       throw error;
     }
@@ -163,6 +142,7 @@ exports.startSimulado = async (req, res) => {
       disciplineKey = `linguagens-${language}`;
     }
 
+    // Regenerar vidas, se necessário
     if (user.vidas < 1) {
       if (!user.proximaVida || user.proximaVida <= new Date()) {
         user.proximaVida = new Date();
@@ -182,13 +162,38 @@ exports.startSimulado = async (req, res) => {
       user.simuladoAttempts[disciplineKey] = [];
     }
 
+    // Verificar se há um simulado ativo
+    const activeSimulado = user.currentSimulado?.attemptId
+      ? user.simuladoAttempts[disciplineKey].find(
+          (attempt) => attempt._id.toString() === user.currentSimulado.attemptId.toString()
+        )
+      : null;
+
+    if (activeSimulado) {
+      const answeredQuestions = activeSimulado.questions.filter((q) => q.userAnswer);
+
+      if (answeredQuestions.length > 0) {
+        // Marcar como concluído caso tenha respostas
+        activeSimulado.completedAt = new Date();
+        activeSimulado.status = "completed";
+        activeSimulado.score = answeredQuestions.filter((q) => q.isCorrect).length;
+      } else {
+        // Sobrescrever caso não tenha respostas
+        user.simuladoAttempts[disciplineKey] = user.simuladoAttempts[disciplineKey].filter(
+          (attempt) => attempt._id.toString() !== activeSimulado._id.toString()
+        );
+      }
+      user.currentSimulado = null;
+      await user.save();
+    }
+
     const completedCount = user.simuladoAttempts[disciplineKey].filter(
       (s) => s.status === "completed"
     ).length;
 
+    // Buscar questões para o novo simulado
     const questions = await fetchQuestions(year, disciplineKey, language, res);
-
-    if (!questions) return; // Caso `res` já tenha respondido o erro
+    if (!questions) return; // Caso fetchQuestions já tenha enviado uma resposta
 
     const attempt = {
       discipline: disciplineKey,
@@ -198,16 +203,11 @@ exports.startSimulado = async (req, res) => {
         questionId: q.questionId,
         index: q.index,
         year: q.year,
-        title: q.title || `Questão ${q.index} - ENEM ${q.year}`,
-        context: q.context || "",
-        files: q.files || [],
-        alternativesIntroduction:
-          q.alternativesIntroduction || "Com base no texto, selecione a alternativa correta",
-        alternatives: q.alternatives.map((alt) => ({
-          letter: alt.letter,
-          text: alt.text,
-          file: alt.file || null,
-        })),
+        title: q.title,
+        context: q.context,
+        files: q.files,
+        alternativesIntroduction: q.alternativesIntroduction,
+        alternatives: q.alternatives,
         correctAlternative: q.correctAlternative,
       })),
       startedAt: new Date(),
