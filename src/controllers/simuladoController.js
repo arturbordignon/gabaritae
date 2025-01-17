@@ -138,7 +138,6 @@ exports.startSimulado = async (req, res) => {
           message: "Idioma inválido ou não especificado para disciplina de linguagens",
         });
       }
-
       disciplineKey = `linguagens-${language}`;
     }
 
@@ -299,44 +298,10 @@ exports.submitAnswer = async (req, res) => {
       user.points = (user.points || 0) + 1;
     } else {
       user.points = Math.max((user.points || 0) - 1, 0);
-      user.vidas -= 1;
-
-      if (user.vidas < 1) {
-        if (!user.proximaVida || user.proximaVida <= new Date()) {
-          user.proximaVida = new Date();
-          user.proximaVida.setHours(user.proximaVida.getHours() + 3);
-        }
-
-        const unansweredQuestions = currentAttempt.questions.filter((q) => !q.userAnswer);
-        unansweredQuestions.forEach((q) => {
-          q.userAnswer = null;
-          q.isCorrect = false;
-          q.answeredAt = new Date();
-        });
-
-        currentAttempt.completedAt = new Date();
-        currentAttempt.status = "completed";
-        currentAttempt.score = currentAttempt.questions.filter((q) => q.isCorrect).length;
-
-        user.currentSimulado = null;
-
-        await user.save();
-
-        return res.status(400).json({
-          message: "Você perdeu todas as vidas! O simulado foi concluído automaticamente.",
-          vidasRestantes: 0,
-          proximaVida: user.proximaVida,
-          simuladoCompleted: true,
-          simuladoDetails: {
-            simuladoNumber: currentAttempt.simuladoNumber,
-            score: currentAttempt.score,
-            totalQuestions: currentAttempt.questions.length,
-          },
-        });
-      }
+      user.vidas = Math.max(user.vidas - 1, 0); // Reduzir vidas
     }
 
-    const isComplete = questionIndex === currentAttempt.questions.length - 1;
+    const isComplete = currentAttempt.questions.every((q) => q.userAnswer);
 
     if (isComplete) {
       currentAttempt.completedAt = new Date();
@@ -346,7 +311,7 @@ exports.submitAnswer = async (req, res) => {
     } else {
       user.currentSimulado.questionIndex = questionIndex + 1;
     }
-    regenerateLives(user);
+
     await user.save();
 
     return res.json({
