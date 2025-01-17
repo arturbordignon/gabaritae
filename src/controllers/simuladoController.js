@@ -23,7 +23,7 @@ const regenerateLives = (user) => {
   }
 };
 
-const fetchQuestions = async (year, discipline, language) => {
+const fetchQuestions = async (year, discipline, language, res) => {
   try {
     const offset = disciplineOffsets[discipline];
     let rangeStart;
@@ -50,31 +50,43 @@ const fetchQuestions = async (year, discipline, language) => {
     const totalQuestions = rangeEnd - rangeStart;
 
     if (totalQuestions < QUESTIONS_PER_SIMULADO) {
-      res
-        .status(500)
-        .json({ message: "Intervalo de questões insuficiente para o número solicitado." });
+      if (res) {
+        return res.status(500).json({
+          message: "Intervalo de questões insuficiente para o número solicitado.",
+        });
+      } else {
+        throw new Error("Intervalo de questões insuficiente para o número solicitado.");
+      }
     }
 
     const apiUrl = `https://api.enem.dev/v1/exams/${year}/questions`;
 
     const response = await axios.get(apiUrl, {
       params: {
-        limit: totalQuestions,
+        limit: QUESTIONS_PER_SIMULADO,
         offset: rangeStart,
         language: discipline.startsWith("linguagens") ? language : undefined,
       },
     });
 
     if (!response.data || !response.data.questions) {
-      res.status(500).json({ message: "Formato inválido de resposta da API." });
+      if (res) {
+        return res.status(500).json({ message: "Formato inválido de resposta da API." });
+      } else {
+        throw new Error("Formato inválido de resposta da API.");
+      }
     }
 
     const allQuestions = response.data.questions;
 
     if (!allQuestions.length) {
-      res
-        .status(500)
-        .json({ message: "Nenhuma questão encontrada para o intervalo especificado." });
+      if (res) {
+        return res
+          .status(500)
+          .json({ message: "Nenhuma questão encontrada para o intervalo especificado." });
+      } else {
+        throw new Error("Nenhuma questão encontrada para o intervalo especificado.");
+      }
     }
 
     const validIndexes = allQuestions.map((q) => q.index);
@@ -92,9 +104,13 @@ const fetchQuestions = async (year, discipline, language) => {
     );
 
     if (selectedQuestions.includes(undefined)) {
-      res
-        .status(500)
-        .json({ message: "Erro ao mapear questões aleatórias. Índices inconsistentes." });
+      if (res) {
+        return res
+          .status(500)
+          .json({ message: "Erro ao mapear questões aleatórias. Índices inconsistentes." });
+      } else {
+        throw new Error("Erro ao mapear questões aleatórias. Índices inconsistentes.");
+      }
     }
 
     return selectedQuestions.map((question) => ({
@@ -116,7 +132,11 @@ const fetchQuestions = async (year, discipline, language) => {
       correctAlternative: question.correctAlternative,
     }));
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    if (res) {
+      return res.status(500).json({ message: error.message });
+    } else {
+      throw error;
+    }
   }
 };
 
@@ -124,6 +144,10 @@ exports.startSimulado = async (req, res) => {
   try {
     const { year, discipline, language } = req.body;
     const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
 
     if (typeof user.points === "undefined") user.points = 0;
     if (typeof user.level === "undefined") user.level = 1;
@@ -137,62 +161,6 @@ exports.startSimulado = async (req, res) => {
       }
 
       disciplineKey = `linguagens-${language}`;
-    }
-
-    const hasActiveSimulado = user.currentSimulado?.attemptId;
-    if (hasActiveSimulado) {
-      const currentAttempt = Object.values(user.simuladoAttempts || {})
-        .flat()
-        .find((attempt) => attempt._id.toString() === user.currentSimulado.attemptId.toString());
-
-      if (currentAttempt) {
-        const maxSimuladoTime = 50 * 60 * 1000;
-        const elapsedTime = new Date() - new Date(currentAttempt.startedAt);
-
-        if (elapsedTime > maxSimuladoTime) {
-          currentAttempt.completedAt = new Date();
-          currentAttempt.status = "completed";
-          currentAttempt.score = currentAttempt.questions.filter((q) => q.isCorrect).length;
-
-          user.currentSimulado = null;
-          await user.save();
-
-          return res.status(400).json({
-            message: "O tempo máximo do simulado foi excedido. Ele foi concluído automaticamente.",
-            simuladoCompleted: true,
-            simuladoDetails: {
-              simuladoNumber: currentAttempt.simuladoNumber,
-              score: currentAttempt.score,
-              totalQuestions: currentAttempt.questions.length,
-            },
-          });
-        }
-
-        const answeredQuestions = currentAttempt.questions.filter((q) => q.userAnswer);
-
-        if (answeredQuestions.length === 0) {
-          Object.keys(user.simuladoAttempts).forEach((discipline) => {
-            user.simuladoAttempts[discipline] = user.simuladoAttempts[discipline].filter(
-              (attempt) => attempt._id.toString() !== currentAttempt._id.toString()
-            );
-          });
-        } else {
-          currentAttempt.questions.forEach((q) => {
-            if (!q.userAnswer) {
-              q.userAnswer = null;
-              q.isCorrect = false;
-              q.answeredAt = new Date();
-            }
-          });
-
-          currentAttempt.completedAt = new Date();
-          currentAttempt.status = "completed";
-          currentAttempt.score = answeredQuestions.filter((q) => q.isCorrect).length;
-        }
-
-        user.currentSimulado = null;
-        await user.save();
-      }
     }
 
     if (user.vidas < 1) {
@@ -218,7 +186,9 @@ exports.startSimulado = async (req, res) => {
       (s) => s.status === "completed"
     ).length;
 
-    const questions = await fetchQuestions(year, disciplineKey, language);
+    const questions = await fetchQuestions(year, disciplineKey, language, res);
+
+    if (!questions) return; // Caso `res` já tenha respondido o erro
 
     const attempt = {
       discipline: disciplineKey,
