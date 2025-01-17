@@ -26,7 +26,6 @@ const regenerateLives = (user) => {
 const fetchQuestions = async (year, discipline, language) => {
   try {
     const offset = disciplineOffsets[discipline];
-    let maxIndex;
     let rangeStart;
     let rangeEnd;
 
@@ -48,41 +47,57 @@ const fetchQuestions = async (year, discipline, language) => {
         rangeEnd = offset + QUESTIONS_PER_SIMULADO;
     }
 
-    maxIndex = rangeEnd - rangeStart;
+    const totalQuestions = rangeEnd - rangeStart;
 
-    if (maxIndex < QUESTIONS_PER_SIMULADO) {
-      res.status(500).json({ message: error.message });
-    }
-
-    const randomIndexes = [];
-    while (randomIndexes.length < QUESTIONS_PER_SIMULADO) {
-      const randomIndex = Math.floor(Math.random() * maxIndex) + rangeStart;
-      if (!randomIndexes.includes(randomIndex)) {
-        randomIndexes.push(randomIndex);
-      }
+    if (totalQuestions < QUESTIONS_PER_SIMULADO) {
+      res
+        .status(500)
+        .json({ message: "Intervalo de questões insuficiente para o número solicitado." });
     }
 
     const apiUrl = `https://api.enem.dev/v1/exams/${year}/questions`;
 
     const response = await axios.get(apiUrl, {
       params: {
-        limit: maxIndex,
+        limit: totalQuestions,
         offset: rangeStart,
         language: discipline.startsWith("linguagens") ? language : undefined,
       },
     });
 
     if (!response.data || !response.data.questions) {
-      res.status(500).json({ message: response.error });
+      res.status(500).json({ message: "Formato inválido de resposta da API." });
     }
 
     const allQuestions = response.data.questions;
+
+    if (!allQuestions.length) {
+      res
+        .status(500)
+        .json({ message: "Nenhuma questão encontrada para o intervalo especificado." });
+    }
+
+    const validIndexes = allQuestions.map((q) => q.index);
+
+    const randomIndexes = [];
+    while (randomIndexes.length < QUESTIONS_PER_SIMULADO) {
+      const randomIndex = validIndexes[Math.floor(Math.random() * validIndexes.length)];
+      if (!randomIndexes.includes(randomIndex)) {
+        randomIndexes.push(randomIndex);
+      }
+    }
 
     const selectedQuestions = randomIndexes.map((index) =>
       allQuestions.find((q) => q.index === index)
     );
 
-    return selectedQuestions.map((question, index) => ({
+    if (selectedQuestions.includes(undefined)) {
+      res
+        .status(500)
+        .json({ message: "Erro ao mapear questões aleatórias. Índices inconsistentes." });
+    }
+
+    return selectedQuestions.map((question) => ({
       questionId: question.index.toString(),
       index: question.index,
       year: question.year,
@@ -94,7 +109,7 @@ const fetchQuestions = async (year, discipline, language) => {
       alternatives: question.alternatives
         .map((alt) => ({
           letter: alt.letter,
-          text: alt.text || "Alternativa sem texto",
+          text: alt.text || "Alternativa sem texto fornecido",
           file: alt.file || null,
         }))
         .filter((alt) => alt.letter),
