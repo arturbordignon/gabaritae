@@ -26,21 +26,21 @@ const regenerateLives = (user) => {
 const fetchQuestions = async (year, discipline, language, res) => {
   try {
     const offset = disciplineOffsets[discipline];
-    let rangeStart;
-    let rangeEnd;
+    let rangeStart, rangeEnd;
 
+    // Adjust ranges to be smaller to prevent overwhelming the API
     switch (discipline) {
       case "matematica":
         rangeStart = 150;
-        rangeEnd = 180;
+        rangeEnd = 165; // Reduced range
         break;
       case "ciencias-humanas":
         rangeStart = 46;
-        rangeEnd = 100;
+        rangeEnd = 66; // Reduced range
         break;
       case "linguagens":
         rangeStart = 0;
-        rangeEnd = 45;
+        rangeEnd = 20; // Reduced range
         break;
       default:
         rangeStart = offset;
@@ -48,48 +48,70 @@ const fetchQuestions = async (year, discipline, language, res) => {
     }
 
     const totalQuestions = rangeEnd - rangeStart;
-
-    if (totalQuestions < QUESTIONS_PER_SIMULADO) {
-      throw new Error("Intervalo de questões insuficiente para o número solicitado.");
-    }
-
     const apiUrl = `https://api.enem.dev/v1/exams/${year}/questions`;
 
-    const response = await axios.get(apiUrl, {
-      params: {
-        limit: totalQuestions,
-        offset: rangeStart,
-        language: discipline.startsWith("linguagens") ? language : undefined,
-      },
+    // Add logging to help debug API requests
+    console.log(`Fetching questions with params:`, {
+      year,
+      discipline,
+      language,
+      rangeStart,
+      rangeEnd,
+      totalQuestions,
     });
 
-    if (!response.data || !response.data.questions) {
-      throw new Error("Formato inválido de resposta da API.");
-    }
+    // Make sure we're not requesting too many questions at once
+    if (totalQuestions > 20) {
+      // Split into multiple requests if needed
+      const chunks = [];
+      for (let i = rangeStart; i < rangeEnd; i += 20) {
+        const chunkEnd = Math.min(i + 20, rangeEnd);
+        const response = await axios.get(apiUrl, {
+          params: {
+            limit: chunkEnd - i,
+            offset: i,
+            language: discipline.startsWith("linguagens") ? language : undefined,
+          },
+        });
+        if (response.data && response.data.questions) {
+          chunks.push(...response.data.questions);
+        }
+      }
+      allQuestions = chunks;
+    } else {
+      const response = await axios.get(apiUrl, {
+        params: {
+          limit: totalQuestions,
+          offset: rangeStart,
+          language: discipline.startsWith("linguagens") ? language : undefined,
+        },
+      });
 
-    const allQuestions = response.data.questions;
+      if (!response.data || !response.data.questions) {
+        throw new Error("Formato inválido de resposta da API.");
+      }
+
+      allQuestions = response.data.questions;
+    }
 
     if (!allQuestions.length) {
       throw new Error("Nenhuma questão encontrada para o intervalo especificado.");
     }
 
-    // Randomize questions
-    const validIndexes = allQuestions.map((q) => q.index);
+    // Select random questions from the fetched set
+    const selectedQuestions = [];
+    const availableQuestions = [...allQuestions];
 
-    const randomIndexes = [];
-    while (randomIndexes.length < QUESTIONS_PER_SIMULADO) {
-      const randomIndex = validIndexes[Math.floor(Math.random() * validIndexes.length)];
-      if (!randomIndexes.includes(randomIndex)) {
-        randomIndexes.push(randomIndex);
-      }
+    while (selectedQuestions.length < QUESTIONS_PER_SIMULADO && availableQuestions.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+      const question = availableQuestions.splice(randomIndex, 1)[0];
+      selectedQuestions.push(question);
     }
 
-    const selectedQuestions = randomIndexes.map((index) =>
-      allQuestions.find((q) => q.index === index)
-    );
-
-    if (selectedQuestions.includes(undefined)) {
-      throw new Error("Erro ao mapear questões aleatórias. Índices inconsistentes.");
+    if (selectedQuestions.length < QUESTIONS_PER_SIMULADO) {
+      throw new Error(
+        `Número insuficiente de questões disponíveis. Encontradas: ${selectedQuestions.length}`
+      );
     }
 
     return selectedQuestions.map((question) => ({
@@ -111,8 +133,12 @@ const fetchQuestions = async (year, discipline, language, res) => {
       correctAlternative: question.correctAlternative,
     }));
   } catch (error) {
+    console.error("Error in fetchQuestions:", error.message, error.response?.data);
     if (res) {
-      res.status(500).json({ message: error.message });
+      res.status(500).json({
+        message: error.message,
+        details: error.response?.data,
+      });
     } else {
       throw error;
     }
@@ -141,7 +167,6 @@ exports.startSimulado = async (req, res) => {
       disciplineKey = `linguagens-${language}`;
     }
 
-    // Regenerar vidas, se necessário
     if (user.vidas < 1) {
       if (!user.proximaVida || user.proximaVida <= new Date()) {
         user.proximaVida = new Date();
@@ -161,7 +186,6 @@ exports.startSimulado = async (req, res) => {
       user.simuladoAttempts[disciplineKey] = [];
     }
 
-    // Verificar se há um simulado ativo
     const activeSimulado = user.currentSimulado?.attemptId
       ? user.simuladoAttempts[disciplineKey].find(
           (attempt) => attempt._id.toString() === user.currentSimulado.attemptId.toString()
@@ -172,12 +196,10 @@ exports.startSimulado = async (req, res) => {
       const answeredQuestions = activeSimulado.questions.filter((q) => q.userAnswer);
 
       if (answeredQuestions.length > 0) {
-        // Marcar como concluído caso tenha respostas
         activeSimulado.completedAt = new Date();
         activeSimulado.status = "completed";
         activeSimulado.score = answeredQuestions.filter((q) => q.isCorrect).length;
       } else {
-        // Sobrescrever caso não tenha respostas
         user.simuladoAttempts[disciplineKey] = user.simuladoAttempts[disciplineKey].filter(
           (attempt) => attempt._id.toString() !== activeSimulado._id.toString()
         );
@@ -190,9 +212,12 @@ exports.startSimulado = async (req, res) => {
       (s) => s.status === "completed"
     ).length;
 
-    // Buscar questões para o novo simulado
     const questions = await fetchQuestions(year, disciplineKey, language, res);
-    if (!questions) return; // Caso fetchQuestions já tenha enviado uma resposta
+    if (!questions || questions.length < QUESTIONS_PER_SIMULADO) {
+      return res.status(500).json({
+        message: "Não foi possível obter questões suficientes para o simulado",
+      });
+    }
 
     const attempt = {
       discipline: disciplineKey,
@@ -293,12 +318,11 @@ exports.submitAnswer = async (req, res) => {
     currentQuestion.isCorrect = isCorrect;
     currentQuestion.answeredAt = new Date();
 
-    // Atualizar pontos e vidas
     if (isCorrect) {
       user.points = (user.points || 0) + 1;
     } else {
       user.points = Math.max((user.points || 0) - 1, 0);
-      user.vidas = Math.max(user.vidas - 1, 0); // Reduzir vidas
+      user.vidas = Math.max(user.vidas - 1, 0);
     }
 
     const isComplete = currentAttempt.questions.every((q) => q.userAnswer);
