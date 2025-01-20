@@ -28,19 +28,18 @@ const fetchQuestions = async (year, discipline, language, res) => {
     const offset = disciplineOffsets[discipline];
     let rangeStart, rangeEnd;
 
-    // Adjust ranges to be smaller to prevent overwhelming the API
     switch (discipline) {
       case "matematica":
         rangeStart = 150;
-        rangeEnd = 165; // Reduced range
+        rangeEnd = 165;
         break;
       case "ciencias-humanas":
         rangeStart = 46;
-        rangeEnd = 66; // Reduced range
+        rangeEnd = 66;
         break;
       case "linguagens":
         rangeStart = 0;
-        rangeEnd = 20; // Reduced range
+        rangeEnd = 20;
         break;
       default:
         rangeStart = offset;
@@ -50,7 +49,6 @@ const fetchQuestions = async (year, discipline, language, res) => {
     const totalQuestions = rangeEnd - rangeStart;
     const apiUrl = `https://api.enem.dev/v1/exams/${year}/questions`;
 
-    // Add logging to help debug API requests
     console.log(`Fetching questions with params:`, {
       year,
       discipline,
@@ -60,9 +58,7 @@ const fetchQuestions = async (year, discipline, language, res) => {
       totalQuestions,
     });
 
-    // Make sure we're not requesting too many questions at once
     if (totalQuestions > 20) {
-      // Split into multiple requests if needed
       const chunks = [];
       for (let i = rangeStart; i < rangeEnd; i += 20) {
         const chunkEnd = Math.min(i + 20, rangeEnd);
@@ -98,7 +94,6 @@ const fetchQuestions = async (year, discipline, language, res) => {
       throw new Error("Nenhuma questão encontrada para o intervalo especificado.");
     }
 
-    // Select random questions from the fetched set
     const selectedQuestions = [];
     const availableQuestions = [...allQuestions];
 
